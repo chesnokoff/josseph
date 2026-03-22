@@ -8,7 +8,7 @@ Container-first pipeline for collecting repository metrics with:
 
 ## Project Layout
 - `configs/` — YAML configuration files for runs
-- `data/` — small example repository lists and workspace data
+- `configs/repositories/` — small example repository lists for e2e runs
 - `results/` — output directory (mounted from host)
 - `josseph/` — Python package and pipeline code
 - `docker-compose.yml` — `sonarqube` + `josseph` services
@@ -103,6 +103,7 @@ docker compose down
 
 ## Notes
 - This setup is container-first for reproducibility.
+- Operational input data and temporary cloned repositories live outside the repo in `../.oss-metrics-data/`.
 - `GITHUB_TOKEN` is passed from host environment into `josseph` via `docker-compose.yml`.
 - `sonar` analysis may be slower on large repositories.
 - Sonar Scanner is vendored in `third_party/sonar-scanner` at a fixed version (`7.0.2.4839`).

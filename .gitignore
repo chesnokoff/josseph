@@ -6,7 +6,6 @@ metrics.csv
 metric_dependencies.csv
 plots/
 /sonar-scanner/
-data/repos*.txt
 
 # Python cache
 __pycache__/

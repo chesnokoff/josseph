@@ -10,9 +10,9 @@ import certifi
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIGS_DIR = ROOT / "configs"
-DATA_DIR = ROOT / "data"
+EXTERNAL_DATA_DIR = ROOT.parent / ".oss-metrics-data"
 RESULTS_DIR = ROOT / "results"
-PROJECTS_DIR = DATA_DIR / "workspace" / "projects"
+PROJECTS_DIR = EXTERNAL_DATA_DIR / "workspace" / "projects"
 THIRD_PARTY_DIR = ROOT / "third_party"
 
 
