@@ -3,9 +3,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from pathlib import Path
+import subprocess
 from typing import Protocol
-
-from josseph.utils import run_command
 
 
 class CommandRunner(Protocol):
@@ -29,4 +28,13 @@ class SubprocessCommandRunner:
         env: Mapping[str, str] | None = None,
         timeout: int | float | None = None,
     ) -> str:
-        return run_command(cmd, cwd=cwd, env=dict(env) if env is not None else None, timeout=timeout)
+        result = subprocess.run(
+            tuple(cmd),
+            cwd=cwd,
+            env=dict(env) if env is not None else None,
+            check=True,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+        return (result.stdout + result.stderr).strip()

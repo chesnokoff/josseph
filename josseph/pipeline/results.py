@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -36,11 +37,27 @@ class ResultWriter:
             f"{self.__class__.__module__}.{self.__class__.__name__}"
         )
 
-    def write(self, path: Path, tool_name: str, rows: list[dict], commit_hash: str) -> None:
+    def write(
+        self,
+        path: Path,
+        tool_name: str,
+        rows: list[dict],
+        commit_hash: str,
+        *,
+        collected_at: datetime | None = None,
+    ) -> None:
         path.mkdir(parents=True, exist_ok=True)
 
         out = path / f"{tool_name}.parquet"
         df = pd.DataFrame(rows)
         df.to_parquet(out, index=False, engine="pyarrow", compression="zstd")
         metadata_path = path / f"{tool_name}.json"
-        metadata_path.write_text(json.dumps({"commit_hash": commit_hash}, indent=2) + "\n")
+        timestamp = collected_at or datetime.now(timezone.utc)
+        timestamp_text = timestamp.astimezone(timezone.utc).replace(microsecond=0).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        metadata = {
+            "commit_hash": commit_hash,
+            "collected_at_utc": timestamp_text,
+        }
+        metadata_path.write_text(json.dumps(metadata, indent=2) + "\n")

@@ -9,6 +9,7 @@ from josseph.pipeline.analyzer import RepositoryAnalyzer
 from josseph.pipeline.cloner import RepositoryCloner
 from josseph.pipeline.config import build_config
 from josseph.pipeline.extractor_factory import select_extractors
+from josseph.pipeline.run_report import RunReportCollector
 from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
 from josseph.pipeline.runner import AnalysisRunner
 from josseph.process import SubprocessCommandRunner
@@ -26,41 +27,56 @@ class RepositoryAnalysisPipeline:
 
         config = build_config(args)
         self.log.info("Loaded configuration from %s", config.config_path)
-        env = dict(os.environ)
-        if config.github_token:
-            env["GITHUB_TOKEN"] = config.github_token
-        command_runner = SubprocessCommandRunner()
-        registry = self._build_registry(
-            env,
-            command_runner,
-            extractor_settings=config.extractor_settings,
-        )
-        extractors = select_extractors(registry, config.tools)
-        repos = config.repositories
-
-        if not repos:
-            self.log.info("No repositories to process.")
-            return 0
-
-        if config.workers < 1:
-            raise ValueError("'workers' must be a positive integer")
-
-        analyzer = RepositoryAnalyzer(
-            cloner=RepositoryCloner(PROJECTS_DIR, command_runner),
-            result_manager=ResultDirectoryManager(RESULTS_DIR),
-            result_writer=ResultWriter(),
-            extractors=extractors,
-            command_runner=command_runner,
-        )
-
-        failures = AnalysisRunner().run(repos, analyzer, config.clone_depth, config.workers)
-        if failures:
-            self.log.error(
-                "%s repositories failed to analyse. See logs above for details.",
-                failures,
+        run_reporter = RunReportCollector(config=config, results_dir=RESULTS_DIR)
+        exit_code = 1
+        try:
+            env = dict(os.environ)
+            if config.github_token:
+                env["GITHUB_TOKEN"] = config.github_token
+            command_runner = SubprocessCommandRunner()
+            registry = self._build_registry(
+                env,
+                command_runner,
+                extractor_settings=config.extractor_settings,
             )
-            return 1
-        return 0
+            extractors = select_extractors(registry, config.tools)
+            repos = config.repositories
+
+            if not repos:
+                self.log.info("No repositories to process.")
+                exit_code = 0
+                return 0
+
+            if config.workers < 1:
+                raise ValueError("'workers' must be a positive integer")
+
+            analyzer = RepositoryAnalyzer(
+                cloner=RepositoryCloner(PROJECTS_DIR, command_runner),
+                result_manager=ResultDirectoryManager(RESULTS_DIR),
+                result_writer=ResultWriter(),
+                extractors=extractors,
+                command_runner=command_runner,
+                run_reporter=run_reporter,
+            )
+            failures = AnalysisRunner().run(
+                repos,
+                analyzer,
+                config.clone_depth,
+                config.workers,
+                run_reporter=run_reporter,
+            )
+            if failures:
+                self.log.error(
+                    "%s repositories failed to analyse. See logs above for details.",
+                    failures,
+                )
+                exit_code = 1
+            else:
+                exit_code = 0
+            return exit_code
+        finally:
+            summary_path = run_reporter.write_summary(exit_code=exit_code)
+            self.log.info("Wrote pipeline run summary to %s", summary_path)
 
     def _build_registry(
         self,

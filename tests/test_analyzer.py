@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 from josseph.pipeline.analyzer import RepositoryAnalyzer
 from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
@@ -61,9 +62,11 @@ def test_repository_analyzer_persists_commit_hash_for_checkout_extractors(tmp_pa
     analyzer.analyze("https://github.com/example/repo.git", clone_depth=1)
 
     metadata_path = tmp_path / "results" / "example@repo" / "ck.json"
-    assert json.loads(metadata_path.read_text(encoding="utf-8")) == {
-        "commit_hash": "abc123"
-    }
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata["commit_hash"] == "abc123"
+    assert datetime.fromisoformat(
+        metadata["collected_at_utc"].replace("Z", "+00:00")
+    ).tzinfo == timezone.utc
     assert extractor.targets[0].checkout_path == checkout_dir
     assert extractor.targets[0].commit_hash == "abc123"
 
@@ -85,3 +88,10 @@ def test_repository_analyzer_passes_domain_target_to_api_extractors(tmp_path):
     assert target.repo_slug == "example/repo"
     assert target.checkout_path is None
     assert target.commit_hash is None
+
+    metadata_path = tmp_path / "results" / "example@repo" / "github.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata["commit_hash"] == ""
+    assert datetime.fromisoformat(
+        metadata["collected_at_utc"].replace("Z", "+00:00")
+    ).tzinfo == timezone.utc

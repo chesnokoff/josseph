@@ -8,6 +8,7 @@ from josseph.domain.repository import AnalysisTarget, RepositoryRef
 from josseph.metrics.abstract_extractor import MetricExtractor
 from josseph.pipeline.cloner import RepositoryCloner, cloned_repository
 from josseph.process import CommandRunner
+from josseph.pipeline.run_report import RunReportCollector
 from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
 
 
@@ -19,6 +20,7 @@ class RepositoryAnalyzer:
         result_writer: ResultWriter,
         extractors: dict[str, MetricExtractor],
         command_runner: CommandRunner,
+        run_reporter: RunReportCollector | None = None,
     ) -> None:
         self.log = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -28,6 +30,7 @@ class RepositoryAnalyzer:
         self._result_writer = result_writer
         self._extractors = extractors
         self._command_runner = command_runner
+        self._run_reporter = run_reporter
         self.log.debug(
             "Initializing repository analysis pipeline: %s", extractors.keys()
         )
@@ -35,7 +38,7 @@ class RepositoryAnalyzer:
     def analyze(self, repo_url: str, clone_depth: int | None) -> None:
         target = AnalysisTarget(repository=RepositoryRef.parse(repo_url))
         result_dir = self._result_manager.prepare(target.project_name)
-        pending_extractors = self._get_pending_extractors(target.project_name)
+        pending_extractors = self._get_pending_extractors(target)
         if not pending_extractors:
             self.log.info(
                 "All metrics already collected for %s. Skipping clone and analysis.",
@@ -65,8 +68,9 @@ class RepositoryAnalyzer:
         self._run_checkout_extractors(checkout_required, target, result_dir, clone_depth)
         self.log.info("Successfully finished analysis of %s", target.project_name)
 
-    def _get_pending_extractors(self, project_name: str) -> dict[str, MetricExtractor]:
+    def _get_pending_extractors(self, target: AnalysisTarget) -> dict[str, MetricExtractor]:
         pending: dict[str, MetricExtractor] = {}
+        project_name = target.project_name
         for extractor_name, extractor in self._extractors.items():
             if self._result_manager.has_result(project_name, extractor_name):
                 self.log.info(
@@ -74,6 +78,13 @@ class RepositoryAnalyzer:
                     project_name,
                     extractor_name,
                 )
+                if self._run_reporter is not None:
+                    self._run_reporter.record_skipped_run(
+                        repo_url=target.repository.raw,
+                        project_name=project_name,
+                        extractor_name=extractor_name,
+                        reason="cached_result",
+                    )
                 continue
             pending[extractor_name] = extractor
         return pending
@@ -139,6 +150,13 @@ class RepositoryAnalyzer:
                     extractor_name,
                     exc,
                 )
+                if self._run_reporter is not None:
+                    self._run_reporter.record_extractor_failure(
+                        repo_url=target.repository.raw,
+                        project_name=target.project_name,
+                        extractor_name=extractor_name,
+                        reason=str(exc),
+                    )
                 continue
             self._result_writer.write(
                 result_dir,

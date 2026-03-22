@@ -20,6 +20,17 @@ class AnalysisConfig:
     github_token: str | None
     workers: int
 
+    def to_report_dict(self) -> dict[str, object]:
+        return {
+            "config_path": str(self.config_path),
+            "repositories": list(self.repositories),
+            "clone_depth": self.clone_depth,
+            "tools": list(self.tools) if self.tools is not None else None,
+            "extractor_settings": dict(self.extractor_settings),
+            "github_token": "***redacted***" if self.github_token else None,
+            "workers": self.workers,
+        }
+
 
 def build_config(args) -> AnalysisConfig:
     config_path = Path(args.config_path).expanduser().resolve()
