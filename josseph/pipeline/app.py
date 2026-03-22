@@ -4,11 +4,7 @@ from __future__ import annotations
 import logging
 import os
 
-from josseph.metrics.extractors.ck import CkExtractor
-from josseph.metrics.extractors.cm import CmExtractor
-from josseph.metrics.extractors.github import GithubExtractor
-from josseph.metrics.extractors.sonar import SonarExtractor, SonarScanner, SonarScannerSettings
-from josseph.metrics.registry import ExtractorRegistry
+from josseph.metrics.registry import ExtractorFactoryContext, ExtractorRegistry
 from josseph.pipeline.analyzer import RepositoryAnalyzer
 from josseph.pipeline.cloner import RepositoryCloner
 from josseph.pipeline.config import build_config
@@ -16,8 +12,6 @@ from josseph.pipeline.extractor_factory import select_extractors
 from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
 from josseph.pipeline.runner import AnalysisRunner
 from josseph.process import SubprocessCommandRunner
-from josseph.providers.github import GithubClient
-from josseph.providers.sonar import SonarClient
 from josseph.utils import PROJECTS_DIR, RESULTS_DIR, THIRD_PARTY_DIR, setup_logging
 
 
@@ -36,7 +30,11 @@ class RepositoryAnalysisPipeline:
         if config.github_token:
             env["GITHUB_TOKEN"] = config.github_token
         command_runner = SubprocessCommandRunner()
-        registry = self._build_registry(env, command_runner)
+        registry = self._build_registry(
+            env,
+            command_runner,
+            extractor_settings=config.extractor_settings,
+        )
         extractors = select_extractors(registry, config.tools)
         repos = config.repositories
 
@@ -68,34 +66,14 @@ class RepositoryAnalysisPipeline:
         self,
         env: dict[str, str],
         command_runner: SubprocessCommandRunner,
+        *,
+        extractor_settings: dict[str, dict[str, object]],
     ) -> ExtractorRegistry:
-        github_client = GithubClient(token=env.get("GITHUB_TOKEN"))
-        sonar_client = SonarClient(
-            host_url=env.get("SONAR_HOST_URL", f"http://localhost:{env.get('SONAR_INSTANCE_PORT', '9234')}"),
-            admin_user=env.get("SONAR_ADMIN_USER", "admin"),
-            admin_password=env.get("SONAR_ADMIN_PASSWORD", "Son@rless123"),
-            admin_default_password=env.get("SONAR_ADMIN_DEFAULT_PASSWORD", "admin"),
-        )
-        sonar_scanner = SonarScanner(
-            command_runner=command_runner,
-            settings=SonarScannerSettings.from_env(env),
-        )
-        cm_timeout_seconds = int(env.get("CM_TIMEOUT_SECONDS", "3600"))
         return ExtractorRegistry(
-            {
-                "ck": lambda: CkExtractor(
-                    third_party_path=THIRD_PARTY_DIR,
-                    command_runner=command_runner,
-                ),
-                "cm": lambda: CmExtractor(
-                    third_party_path=THIRD_PARTY_DIR,
-                    command_runner=command_runner,
-                    timeout_seconds=cm_timeout_seconds,
-                ),
-                "github": lambda: GithubExtractor(client=github_client),
-                "sonar": lambda: SonarExtractor(
-                    client=sonar_client,
-                    scanner=sonar_scanner,
-                ),
-            }
+            ExtractorFactoryContext(
+                third_party_path=THIRD_PARTY_DIR,
+                env=env,
+                command_runner=command_runner,
+            ),
+            settings_by_name=extractor_settings,
         )

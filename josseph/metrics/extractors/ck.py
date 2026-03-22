@@ -7,8 +7,11 @@ from pathlib import Path
 
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
+from josseph.metrics.registry import ExtractorFactoryContext
 from josseph.process import CommandRunner
 from josseph.utils import AnalysisError
+
+EXTRACTOR_NAME = "ck"
 
 
 class CkExtractor(MetricExtractor):
@@ -54,3 +57,16 @@ def _require_checkout(target: AnalysisTarget) -> Path:
     if target.checkout_path is None:
         raise AnalysisError("CK extractor requires a local repository checkout.")
     return target.checkout_path
+
+
+def build_extractor(
+    context: ExtractorFactoryContext,
+    settings: dict[str, object],
+) -> CkExtractor:
+    if settings:
+        unknown = ", ".join(sorted(settings))
+        raise ValueError(f"Unknown setting(s) for extractor 'ck': {unknown}")
+    return CkExtractor(
+        third_party_path=context.third_party_path,
+        command_runner=context.command_runner,
+    )

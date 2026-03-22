@@ -61,6 +61,7 @@ The container reads `/app/configs/config.yaml` by default.
 
 Supported keys:
 - `tools`: optional list of extractors (`ck`, `cm`, `github`, `sonar`); omitted means all
+- `extractor_settings`: optional mapping of extractor name to extractor-specific settings
 - `clone_depth`: optional positive integer for shallow clone depth
 - `workers`: optional positive integer; omitted means CPU count
 - `github_token`: optional token value; if omitted, `GITHUB_TOKEN` from the environment is used
@@ -116,7 +117,45 @@ docker compose down
 
 ## Extensibility API
 To add a new metrics source:
-1. Create a new module in `josseph/metrics/extractors/`.
-2. Subclass `MetricExtractor` and implement `run(target: AnalysisTarget) -> list[dict]`.
-3. Set `requires_checkout = False` for API-only extractors that do not need a local clone.
-4. Wire the extractor into `RepositoryAnalysisPipeline._build_registry()`.
+1. Add a new module under `josseph/metrics/extractors/`, for example `my_extractor.py`.
+2. In that module:
+   - define `EXTRACTOR_NAME = "my_extractor"`
+   - implement `build_extractor(context, settings)`
+   - implement an extractor class that subclasses `MetricExtractor`
+3. List the extractor name under `tools:` in the YAML config.
+4. Pass extractor-specific parameters under `extractor_settings:` when needed.
+
+Example:
+
+```yaml
+tools:
+  - github
+  - my_extractor
+
+extractor_settings:
+  my_extractor:
+    threshold: 10
+```
+
+Minimal extractor module:
+
+```python
+from josseph.metrics.abstract_extractor import MetricExtractor
+
+EXTRACTOR_NAME = "my_extractor"
+
+
+class MyExtractor(MetricExtractor):
+    requires_checkout = False
+
+    def __init__(self, threshold: int) -> None:
+        self.threshold = threshold
+
+    def run(self, target):
+        return [{"threshold": self.threshold, "repo": target.project_name}]
+
+
+def build_extractor(context, settings):
+    threshold = int(settings.get("threshold", 10))
+    return MyExtractor(threshold=threshold)
+```

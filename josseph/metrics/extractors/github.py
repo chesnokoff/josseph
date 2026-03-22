@@ -3,7 +3,10 @@ from urllib.error import HTTPError, URLError
 
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
+from josseph.metrics.registry import ExtractorFactoryContext
 from josseph.providers.github import GithubClient
+
+EXTRACTOR_NAME = "github"
 
 
 class GithubExtractor(MetricExtractor):
@@ -58,3 +61,20 @@ class GithubExtractor(MetricExtractor):
             "pushed_at": repo_data.get("pushed_at", ""),
         }
         return mapping
+
+
+def build_extractor(
+    context: ExtractorFactoryContext,
+    settings: dict[str, object],
+) -> GithubExtractor:
+    allowed = {"token"}
+    unknown = sorted(set(settings) - allowed)
+    if unknown:
+        unknown_list = ", ".join(unknown)
+        raise ValueError(f"Unknown setting(s) for extractor 'github': {unknown_list}")
+
+    token = settings.get("token", context.env.get("GITHUB_TOKEN"))
+    if token is not None and not isinstance(token, str):
+        raise ValueError("Extractor setting 'github.token' must be a string")
+
+    return GithubExtractor(client=GithubClient(token=token))

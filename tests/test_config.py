@@ -29,6 +29,9 @@ def test_build_config_reads_yaml_and_resolves_repositories(tmp_path, monkeypatch
                 "tools:",
                 "  - github",
                 "  - ck",
+                "extractor_settings:",
+                "  github:",
+                "    token: test-token",
                 "clone_depth: 5",
                 "workers: '3'",
                 "repositories: repos.txt",
@@ -47,6 +50,7 @@ def test_build_config_reads_yaml_and_resolves_repositories(tmp_path, monkeypatch
         "https://github.com/example/beta.git",
     ]
     assert config.tools == ["github", "ck"]
+    assert config.extractor_settings == {"github": {"token": "test-token"}}
     assert config.clone_depth == 5
     assert config.workers == 3
     assert config.github_token is None
@@ -80,4 +84,24 @@ def test_build_config_rejects_invalid_workers(tmp_path):
     )
 
     with pytest.raises(ValueError, match="'workers' must be a positive integer"):
+        build_config(Namespace(config_path=str(config_file)))
+
+
+def test_build_config_rejects_non_mapping_extractor_settings(tmp_path):
+    repos_file = tmp_path / "repos.txt"
+    repos_file.write_text("https://github.com/example/repo.git\n", encoding="utf-8")
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(
+        "\n".join(
+            [
+                "repositories: repos.txt",
+                "extractor_settings:",
+                "  - invalid",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="'extractor_settings' must be a mapping"):
         build_config(Namespace(config_path=str(config_file)))

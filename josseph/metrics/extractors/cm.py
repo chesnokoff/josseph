@@ -7,8 +7,11 @@ from pathlib import Path
 
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
+from josseph.metrics.registry import ExtractorFactoryContext
 from josseph.process import CommandRunner
 from josseph.utils import AnalysisError
+
+EXTRACTOR_NAME = "cm"
 
 
 class CmExtractor(MetricExtractor):
@@ -61,3 +64,24 @@ def _require_checkout(target: AnalysisTarget) -> Path:
     if target.checkout_path is None:
         raise AnalysisError("CM extractor requires a local repository checkout.")
     return target.checkout_path
+
+
+def build_extractor(
+    context: ExtractorFactoryContext,
+    settings: dict[str, object],
+) -> CmExtractor:
+    allowed = {"timeout_seconds"}
+    unknown = sorted(set(settings) - allowed)
+    if unknown:
+        unknown_list = ", ".join(unknown)
+        raise ValueError(f"Unknown setting(s) for extractor 'cm': {unknown_list}")
+
+    timeout_value = settings.get("timeout_seconds", int(context.env.get("CM_TIMEOUT_SECONDS", "3600")))
+    if isinstance(timeout_value, bool) or not isinstance(timeout_value, int) or timeout_value < 1:
+        raise ValueError("Extractor setting 'cm.timeout_seconds' must be a positive integer")
+
+    return CmExtractor(
+        third_party_path=context.third_party_path,
+        command_runner=context.command_runner,
+        timeout_seconds=timeout_value,
+    )

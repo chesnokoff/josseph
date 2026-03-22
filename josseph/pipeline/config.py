@@ -16,6 +16,7 @@ class AnalysisConfig:
     repositories: list[str]
     clone_depth: int | None
     tools: list[str] | None
+    extractor_settings: dict[str, dict[str, object]]
     github_token: str | None
     workers: int
 
@@ -29,6 +30,7 @@ def build_config(args) -> AnalysisConfig:
         repositories=_parse_repositories(raw, config_path),
         clone_depth=_parse_clone_depth(raw.get("clone_depth")),
         tools=_parse_tools(raw.get("tools")),
+        extractor_settings=_parse_extractor_settings(raw.get("extractor_settings")),
         github_token=_parse_optional_string(raw.get("github_token"), "github_token")
         or os.environ.get("GITHUB_TOKEN"),
         workers=_parse_workers(raw.get("workers")),
@@ -112,6 +114,28 @@ def _parse_workers(value: object) -> int:
             raise ValueError("'workers' must be a positive integer")
         return parsed
     raise ValueError("'workers' must be a positive integer")
+
+
+def _parse_extractor_settings(value: object) -> dict[str, dict[str, object]]:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError("'extractor_settings' must be a mapping of extractor names to settings")
+
+    parsed: dict[str, dict[str, object]] = {}
+    for raw_name, raw_settings in value.items():
+        name = _parse_optional_string(raw_name, "extractor_settings key")
+        if name is None:
+            raise ValueError("'extractor_settings' cannot contain empty extractor names")
+        if raw_settings is None:
+            parsed[name] = {}
+            continue
+        if not isinstance(raw_settings, dict):
+            raise ValueError(
+                f"'extractor_settings.{name}' must be a mapping of setting names to values"
+            )
+        parsed[name] = dict(raw_settings)
+    return parsed
 
 
 def _parse_string_list(

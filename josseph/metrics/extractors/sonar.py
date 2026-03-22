@@ -3,14 +3,18 @@ from __future__ import annotations
 import logging
 import shlex
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
+from josseph.metrics.registry import ExtractorFactoryContext
 from josseph.process import CommandRunner
 from josseph.providers.sonar import SonarClient
 from josseph.utils import AnalysisError
+
+EXTRACTOR_NAME = "sonar"
 
 
 @dataclass(frozen=True)
@@ -172,3 +176,53 @@ def _require_checkout(target: AnalysisTarget) -> Path:
     if target.checkout_path is None:
         raise AnalysisError("Sonar extractor requires a local repository checkout.")
     return target.checkout_path
+
+
+def build_extractor(
+    context: ExtractorFactoryContext,
+    settings: dict[str, object],
+) -> SonarExtractor:
+    env = _build_sonar_environment(context.env, settings)
+    sonar_client = SonarClient(
+        host_url=env.get("SONAR_HOST_URL", f"http://localhost:{env.get('SONAR_INSTANCE_PORT', '9234')}"),
+        admin_user=env.get("SONAR_ADMIN_USER", "admin"),
+        admin_password=env.get("SONAR_ADMIN_PASSWORD", "Son@rless123"),
+        admin_default_password=env.get("SONAR_ADMIN_DEFAULT_PASSWORD", "admin"),
+    )
+    sonar_scanner = SonarScanner(
+        command_runner=context.command_runner,
+        settings=SonarScannerSettings.from_env(env),
+    )
+    return SonarExtractor(client=sonar_client, scanner=sonar_scanner)
+
+
+def _build_sonar_environment(
+    base_env: dict[str, str] | Mapping[str, str],
+    settings: dict[str, object],
+) -> dict[str, str]:
+    supported = {
+        "instance_port": "SONAR_INSTANCE_PORT",
+        "host_url": "SONAR_HOST_URL",
+        "admin_user": "SONAR_ADMIN_USER",
+        "admin_password": "SONAR_ADMIN_PASSWORD",
+        "admin_default_password": "SONAR_ADMIN_DEFAULT_PASSWORD",
+        "empty_binaries_dir": "SONAR_EMPTY_BINARIES_DIR",
+        "exclusions": "SONAR_EXCLUSIONS",
+        "include_frontend": "SONAR_INCLUDE_FRONTEND",
+        "options": "SONAR_OPTIONS",
+    }
+    unknown = sorted(set(settings) - set(supported))
+    if unknown:
+        unknown_list = ", ".join(unknown)
+        raise ValueError(f"Unknown setting(s) for extractor 'sonar': {unknown_list}")
+
+    env = dict(base_env)
+    for setting_name, env_name in supported.items():
+        if setting_name not in settings:
+            continue
+        value = settings[setting_name]
+        if isinstance(value, bool):
+            env[env_name] = "true" if value else "false"
+        else:
+            env[env_name] = str(value)
+    return env
