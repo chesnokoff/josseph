@@ -104,6 +104,7 @@ docker compose down
 ## Notes
 - This setup is container-first for reproducibility.
 - Operational input data and temporary cloned repositories live outside the repo in `../.oss-metrics-data/`.
+- Analysis helpers and operational scripts live outside the repo in `../.oss-metrics-tools/`.
 - `GITHUB_TOKEN` is passed from host environment into `josseph` via `docker-compose.yml`.
 - `sonar` analysis may be slower on large repositories.
 - Sonar Scanner is vendored in `third_party/sonar-scanner` at a fixed version (`7.0.2.4839`).
