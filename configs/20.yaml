@@ -5,4 +5,4 @@ tools:
   - sonar
 clone_depth: 1
 workers: 2
-repositories: repositories/e2e-20-small-repos.txt
+repositories: repositories/20-repos.txt
