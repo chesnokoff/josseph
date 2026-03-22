@@ -8,7 +8,7 @@ Container-first pipeline for collecting repository metrics with:
 
 ## Project Layout
 - `configs/` — YAML configuration files for runs
-- `data/` — repository lists and workspace data
+- `data/` — small example repository lists and workspace data
 - `results/` — output directory (mounted from host)
 - `josseph/` — Python package and pipeline code
 - `docker-compose.yml` — `sonarqube` + `josseph` services
@@ -47,7 +47,7 @@ tools:
   - sonar
 clone_depth: 1
 workers: 1
-repositories: ../data/repos.txt
+repositories: ../../.oss-metrics-data/repos.txt
 ```
 
 4. Run the pipeline:
@@ -75,7 +75,8 @@ Results are written to:
 - `results/<owner>@<repo>/cm.parquet`
 - `results/<owner>@<repo>/github.parquet`
 - `results/<owner>@<repo>/sonar.parquet`
-- `results/<owner>@<repo>/*.json` (metadata)
+- `results/<owner>@<repo>/*.json` (metadata with `commit_hash` and `collected_at_utc`)
+- `results/runs/<run-id>/summary.json` (pipeline-level run metadata)
 
 A metric is considered complete only when both files exist:
 - `results/<owner>@<repo>/<tool>.parquet`
