@@ -5,28 +5,40 @@ import logging
 import tempfile
 from pathlib import Path
 
-from josseph.metrics.extractor import ExtractorConfig, MetricExtractor, extractor
-from josseph.utils import AnalysisError, run_command
+from josseph.domain.repository import AnalysisTarget
+from josseph.metrics.abstract_extractor import MetricExtractor
+from josseph.process import CommandRunner
+from josseph.utils import AnalysisError
 
 
-@extractor("cm")
 class CmExtractor(MetricExtractor):
-    def __init__(self, cfg: ExtractorConfig) -> None:
-        super().__init__(cfg)
-
+    def __init__(
+        self,
+        *,
+        third_party_path: Path,
+        command_runner: CommandRunner,
+        timeout_seconds: int,
+    ) -> None:
         self.log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
-
-        self.cm_jar = self.cfg.tools_path / "cm" / "cm.jar"
+        self._command_runner = command_runner
+        self.cm_timeout_seconds = timeout_seconds
+        self.cm_jar = third_party_path / "cm" / "cm.jar"
         if not self.cm_jar.exists():
             raise AnalysisError(f"CM jar not found at {self.cm_jar}. Build it before running the analysis.")
 
-    def run(self, repo_path: Path, project_name: str) -> list[dict[str, str]]:
+    def run(self, target: AnalysisTarget) -> list[dict[str, str]]:
+        repo_path = _require_checkout(target)
         with tempfile.TemporaryDirectory() as temp_dir_name:
             temp_dir = Path(temp_dir_name)
             self.log.info(f"Running CM metrics on {repo_path}")
 
             try:
-                self.log.trace(run_command(["java", "-jar", str(self.cm_jar), str(repo_path), temp_dir / "results.csv", "single"]))
+                self.log.trace(
+                    self._command_runner.run(
+                        ["java", "-jar", str(self.cm_jar), str(repo_path), temp_dir / "results.csv", "single"],
+                        timeout=self.cm_timeout_seconds,
+                    )
+                )
             except Exception as exc:
                 raise AnalysisError(f"CM execution failed: {exc}") from exc
 
@@ -43,3 +55,9 @@ class CmExtractor(MetricExtractor):
                         continue
                     metrics.append(row)
             return metrics
+
+
+def _require_checkout(target: AnalysisTarget) -> Path:
+    if target.checkout_path is None:
+        raise AnalysisError("CM extractor requires a local repository checkout.")
+    return target.checkout_path

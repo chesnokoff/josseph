@@ -1,0 +1,8 @@
+tools:
+  - ck
+  - cm
+  - github
+  - sonar
+clone_depth: 1
+workers: 2
+repositories: ../data/e2e-20-small-repos.txt

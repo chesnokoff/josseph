@@ -1,11 +1,8 @@
-"""Metric extractor registrations."""
+"""Concrete metric extractors."""
 
-from importlib import import_module
-from pkgutil import iter_modules
+from josseph.metrics.extractors.ck import CkExtractor
+from josseph.metrics.extractors.cm import CmExtractor
+from josseph.metrics.extractors.github import GithubExtractor
+from josseph.metrics.extractors.sonar import SonarExtractor
 
-_PACKAGE_NAME = __name__
-
-for _module in iter_modules(__path__):
-    if _module.ispkg:
-        continue
-    import_module(f"{_PACKAGE_NAME}.{_module.name}")
+__all__ = ["CkExtractor", "CmExtractor", "GithubExtractor", "SonarExtractor"]

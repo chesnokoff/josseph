@@ -1,3 +1,1 @@
-print("josseph STARTED")
-import josseph.metrics
-print("josseph ENDED")
+"""oss-metrics package."""

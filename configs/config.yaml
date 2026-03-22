@@ -1,0 +1,9 @@
+# Example run configuration for the josseph container.
+tools:
+  - ck
+  - cm
+  - github
+  - sonar
+clone_depth: 1
+workers: 1
+repositories: ../data/repos.txt

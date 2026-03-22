@@ -8,10 +8,16 @@ __pycache__
 .pytest_cache
 
 venv
-workspace
+.venv
+data
 results
 logs
 plots
+.run_1k_state
+.tmp_selection
+results_archive_*
+.DS_Store
+tests
 
-tools/ck/target
-tools/cm/target
+third_party/ck/target
+third_party/cm/target

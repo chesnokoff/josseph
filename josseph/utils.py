@@ -9,8 +9,11 @@ from pathlib import Path
 import certifi
 
 ROOT = Path(__file__).resolve().parents[1]
+CONFIGS_DIR = ROOT / "configs"
+DATA_DIR = ROOT / "data"
 RESULTS_DIR = ROOT / "results"
-PROJECTS_DIR = ROOT / "workspace" / "projects"
+PROJECTS_DIR = DATA_DIR / "workspace" / "projects"
+THIRD_PARTY_DIR = ROOT / "third_party"
 
 
 class AnalysisError(Exception):
@@ -74,6 +77,7 @@ def run_command(
     cmd: Iterable[str],
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
+    timeout: int | float | None = None,
 ) -> str:
     result = subprocess.run(
         cmd,
@@ -82,5 +86,6 @@ def run_command(
         check=True,
         text=True,
         capture_output=True,
+        timeout=timeout,
     )
     return (result.stdout + result.stderr).strip()

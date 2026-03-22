@@ -7,9 +7,10 @@ Container-first pipeline for collecting repository metrics with:
 - SonarQube metrics (`sonar` extractor)
 
 ## Project Layout
-- `josseph/` — Python package and pipeline code
-- `repos.txt` — default list of repositories (one URL per line)
+- `configs/` — YAML configuration files for runs
+- `data/` — repository lists and workspace data
 - `results/` — output directory (mounted from host)
+- `josseph/` — Python package and pipeline code
 - `docker-compose.yml` — `sonarqube` + `josseph` services
 - `Dockerfile` — runtime image for `josseph`
 
@@ -34,22 +35,38 @@ docker compose build josseph
 docker compose up -d sonarqube
 ```
 
-3. Run the pipeline:
+3. Configure the run in `configs/config.yaml`.
 
-```bash
-docker compose run --rm josseph python -m josseph --workers 1
+Example:
+
+```yaml
+tools:
+  - ck
+  - cm
+  - github
+  - sonar
+clone_depth: 1
+workers: 1
+repositories: ../data/repos.txt
 ```
 
-## Repositories Input
-By default, `repos.txt` is mounted into the container as `/app/repos.txt`.
-
-- Default file:
-  - `./repos.txt`
-- Custom file for one run:
+4. Run the pipeline:
 
 ```bash
-JOSSEPH_REPOS_FILE_HOST=./my-repos.txt docker compose run --rm josseph python -m josseph --workers 1
+docker compose run --rm josseph
 ```
+
+## Configuration Format
+The container reads `/app/configs/config.yaml` by default.
+
+Supported keys:
+- `tools`: optional list of extractors (`ck`, `cm`, `github`, `sonar`); omitted means all
+- `clone_depth`: optional positive integer for shallow clone depth
+- `workers`: optional positive integer; omitted means CPU count
+- `github_token`: optional token value; if omitted, `GITHUB_TOKEN` from the environment is used
+- `repositories`: path to a text file with one repository URL per line
+
+Path in `repositories` is resolved relative to the YAML file.
 
 ## Outputs
 Results are written to:
@@ -59,14 +76,9 @@ Results are written to:
 - `results/<owner>@<repo>/sonar.parquet`
 - `results/<owner>@<repo>/*.json` (metadata)
 
-## Run Specific Extractors
-Run only one or more tools:
-
-```bash
-docker compose run --rm josseph python -m josseph --tool ck --tool cm
-docker compose run --rm josseph python -m josseph --tool github
-docker compose run --rm josseph python -m josseph --tool sonar
-```
+A metric is considered complete only when both files exist:
+- `results/<owner>@<repo>/<tool>.parquet`
+- `results/<owner>@<repo>/<tool>.json`
 
 ## Common Commands
 - Rebuild image after code changes:
@@ -91,3 +103,20 @@ docker compose down
 - This setup is container-first for reproducibility.
 - `GITHUB_TOKEN` is passed from host environment into `josseph` via `docker-compose.yml`.
 - `sonar` analysis may be slower on large repositories.
+- Sonar Scanner is vendored in `third_party/sonar-scanner` at a fixed version (`7.0.2.4839`).
+
+## Reproducibility Contract
+- Runtime dependencies are pinned in `requirements.txt`.
+- Unknown tool names fail fast (`tools:` validates against the registered extractors).
+- The process exit code is strict:
+  - `0`: all repositories processed without top-level failures
+  - `1`: one or more repositories failed during analysis
+  - `2`: invalid user input/configuration (for example, unknown tool)
+- Cached results are reused only when both `<tool>.parquet` and `<tool>.json` are present.
+
+## Extensibility API
+To add a new metrics source:
+1. Create a new module in `josseph/metrics/extractors/`.
+2. Subclass `MetricExtractor` and implement `run(target: AnalysisTarget) -> list[dict]`.
+3. Set `requires_checkout = False` for API-only extractors that do not need a local clone.
+4. Wire the extractor into `RepositoryAnalysisPipeline._build_registry()`.

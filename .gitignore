@@ -1,10 +1,11 @@
 # Pipeline outputs
 results/
 workspace/
+logs/
 metrics.csv
 metric_dependencies.csv
 plots/
-sonar-scanner/
+/sonar-scanner/
 
 # Python cache
 __pycache__/

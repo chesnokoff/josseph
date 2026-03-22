@@ -17,8 +17,9 @@ services:
     build: .
     working_dir: /app
     volumes:
+      - ./configs:/app/configs:ro
+      - ./data:/app/data:ro
       - ./results:/app/results
-      - ${JOSSEPH_REPOS_FILE_HOST:-./repos.txt}:/app/repos.txt:ro
     environment:
       SONAR_HOST_URL: http://sonarqube:9000
       SONAR_ADMIN_USER: admin
@@ -27,7 +28,6 @@ services:
     depends_on:
       sonarqube:
         condition: service_healthy
-    command: ["python", "-m", "josseph"]
     networks:
       - sonar
 

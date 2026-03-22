@@ -1,0 +1,5 @@
+tools:
+  - cm
+clone_depth: 1
+workers: 1
+repositories: ../data/e2e-one-repo.txt

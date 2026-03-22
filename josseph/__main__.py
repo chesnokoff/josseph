@@ -1,44 +1,25 @@
 import argparse
-import os
+import sys
 
-from josseph.utils import ROOT
-from josseph.run_analysis import RepositoryAnalysisPipeline
+from josseph.utils import CONFIGS_DIR
+from josseph.pipeline.app import RepositoryAnalysisPipeline
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--repos",
-        dest="repos_file",
-        default=str(ROOT / "repos.txt"),
-        help="Path to the file containing repository URLs (default: %(default)s)",
+    parser = argparse.ArgumentParser(
+        description="Run repository analysis using a YAML configuration file."
     )
     parser.add_argument(
-        "--clone-depth",
-        default=None,
-        help="Depth to use when cloning repositories)",
-    )
-    parser.add_argument(
-        "--tool",
-        action="append",
-        dest="tools",
-        help="Metric tool name to run (can be provided multiple times; default: all)",
-    )
-    parser.add_argument(
-        "--github-token",
-        default=None,
-        help="GitHub token to use for API requests (default: env GITHUB_TOKEN)",
-    )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=os.cpu_count() or 1,
-        help="Maximum number of repositories to analyse in parallel (default: CPU count)",
+        "config_path",
+        nargs="?",
+        default=str(CONFIGS_DIR / "config.yaml"),
+        help="Path to the YAML configuration file (default: %(default)s)",
     )
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> int:
+    args = parse_args()
     print("""
        _  ____   _____ _____            _     
       | |/ __ \\ / ____/ ____|          | |    
@@ -49,8 +30,11 @@ def main() -> None:
                                  | |          
                                  |_|          
 """)
-    args = parse_args()
-    RepositoryAnalysisPipeline().run(args)
+    try:
+        return RepositoryAnalysisPipeline().run(args)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

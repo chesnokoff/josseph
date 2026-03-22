@@ -1,5 +1,3 @@
-print("josseph.metrics STARTED")
+"""Metric extraction package."""
 
-from josseph.metrics import extractor, registry
-
-print("josseph.metrics ENDED")
+__all__ = ["abstract_extractor", "registry"]
