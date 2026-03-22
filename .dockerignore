@@ -1,0 +1,17 @@
+.git
+.github
+.idea
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+
+venv
+workspace
+results
+logs
+plots
+
+tools/ck/target
+tools/cm/target

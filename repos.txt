@@ -1,0 +1,5 @@
+https://github.com/square/javapoet.git
+https://github.com/square/retrofit.git
+https://github.com/apache/commons-lang.git
+https://github.com/ReactiveX/RxJava.git
+https://github.com/google/truth.git

@@ -1,0 +1,11 @@
+# Pipeline outputs
+results/
+workspace/
+metrics.csv
+metric_dependencies.csv
+plots/
+sonar-scanner/
+
+# Python cache
+__pycache__/
+*.pyc

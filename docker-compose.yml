@@ -1,0 +1,36 @@
+services:
+  sonarqube:
+    image: sonarqube:25.5.0.107428-community
+    container_name: sonar-server
+    ports:
+      - "9234:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks:
+      - sonar
+
+  josseph:
+    build: .
+    working_dir: /app
+    volumes:
+      - ./results:/app/results
+      - ${JOSSEPH_REPOS_FILE_HOST:-./repos.txt}:/app/repos.txt:ro
+    environment:
+      SONAR_HOST_URL: http://sonarqube:9000
+      SONAR_ADMIN_USER: admin
+      SONAR_ADMIN_PASSWORD: Son@rless123
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+    depends_on:
+      sonarqube:
+        condition: service_healthy
+    command: ["python", "-m", "josseph"]
+    networks:
+      - sonar
+
+networks:
+  sonar:
+    name: sonar
