@@ -52,3 +52,53 @@ def test_run_report_writes_summary(tmp_path):
     assert payload["config"]["github_token"] == "***redacted***"
     assert payload["summary"]["failed_run_count"] == 1
     assert payload["summary"]["skipped_run_count"] == 1
+
+
+def test_run_report_records_repository_failures(tmp_path):
+    started_at = datetime(2026, 3, 22, 15, 0, 0, tzinfo=timezone.utc)
+    collector = RunReportCollector(
+        config=make_config(tmp_path),
+        results_dir=tmp_path / "results",
+        started_at=started_at,
+    )
+
+    collector.record_repository_failure(
+        repo_url="https://github.com/example/repo.git",
+        reason="clone failed",
+    )
+    collector.record_extractor_failure(
+        repo_url="https://github.com/example/repo.git",
+        project_name="example@repo",
+        extractor_name="github",
+        reason="api failed",
+    )
+
+    summary_path = collector.write_summary(
+        finished_at=started_at + timedelta(seconds=1),
+        exit_code=1,
+    )
+
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "failed"
+    assert payload["summary"] == {
+        "repository_count": 1,
+        "affected_repository_count": 1,
+        "repository_failure_count": 1,
+        "extractor_failure_count": 1,
+        "failed_run_count": 2,
+        "skipped_run_count": 0,
+    }
+    assert payload["repository_failures"] == [
+        {
+            "scope": "repository",
+            "repo_url": "https://github.com/example/repo.git",
+            "project_name": "example@repo",
+            "reason": "clone failed",
+            "recorded_at_utc": payload["repository_failures"][0]["recorded_at_utc"],
+        }
+    ]
+    assert payload["failed_runs"][0]["scope"] == "repository"
+    assert payload["failed_runs"][0]["repo_url"] == "https://github.com/example/repo.git"
+    assert payload["failed_runs"][0]["reason"] == "clone failed"
+    assert payload["failed_runs"][1]["scope"] == "extractor"
+    assert payload["failed_runs"][1]["extractor"] == "github"

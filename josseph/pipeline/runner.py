@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from josseph.pipeline.analyzer import RepositoryAnalyzer
+from josseph.pipeline.analyzer import RepositoryAnalysisError, RepositoryAnalyzer
 from josseph.pipeline.run_report import RunReportCollector
 
 
@@ -22,6 +22,11 @@ class AnalysisRunner:
         workers: int,
         run_reporter: RunReportCollector | None = None,
     ) -> int:
+        if not repos:
+            return 0
+        if workers < 1:
+            raise ValueError("'workers' must be a positive integer")
+
         max_workers = min(workers, len(repos))
         failures = 0
 
@@ -33,12 +38,20 @@ class AnalysisRunner:
                 repo = futures[future]
                 try:
                     future.result()
-                except Exception as exc:  # noqa: BLE001 - preserved behavior
+                except RepositoryAnalysisError as exc:
                     failures += 1
                     if run_reporter is not None:
                         run_reporter.record_repository_failure(
                             repo_url=repo,
                             reason=str(exc),
                         )
-                    self.log.warning("Failed to analyse %s: %s", repo, exc)
+                    self.log.error("Repository analysis failed for %s: %s", repo, exc)
+                except Exception as exc:  # noqa: BLE001 - preserved behavior
+                    failures += 1
+                    if run_reporter is not None:
+                        run_reporter.record_repository_failure(
+                            repo_url=repo,
+                            reason=f"{exc.__class__.__name__}: {exc}",
+                        )
+                    self.log.exception("Unexpected failure analysing %s", repo)
         return failures

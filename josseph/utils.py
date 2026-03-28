@@ -1,12 +1,16 @@
 import logging
 import ssl
-import subprocess
+import time
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Mapping
 from logging import config
 from pathlib import Path
+from typing import TypeVar
+from urllib.error import HTTPError, URLError
 
 import certifi
+
+from josseph.process import SubprocessCommandRunner
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIGS_DIR = ROOT / "configs"
@@ -15,9 +19,13 @@ RESULTS_DIR = ROOT / "results"
 PROJECTS_DIR = EXTERNAL_DATA_DIR / "workspace" / "projects"
 THIRD_PARTY_DIR = ROOT / "third_party"
 
+_LOGGING_CONFIGURED = False
+T = TypeVar("T")
+
 
 class AnalysisError(Exception):
     """Raised when an analysis tool fails."""
+
 
 def next_logfile(log_dir: Path, prefix: str) -> Path:
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -32,11 +40,12 @@ def next_logfile(log_dir: Path, prefix: str) -> Path:
     n = max(nums, default=0) + 1
     return log_dir / f"{prefix}-{n:04d}.log"
 
+
 def setup_logconfig():
-    logfile = next_logfile(Path("logs"), "josseph")
+    logfile = next_logfile(ROOT / "logs", "josseph")
 
     logging.config.fileConfig(
-        "logging.ini",
+        ROOT / "logging.ini",
         defaults={"sys": sys, "logfile": str(logfile)},
         disable_existing_loggers=False,
     )
@@ -46,19 +55,25 @@ def setup_logconfig():
 
 def setup_trace():
     TRACE = 5
-    logging.addLevelName(TRACE, "TRACE")
+    if getattr(logging, "TRACE", None) != TRACE:
+        logging.addLevelName(TRACE, "TRACE")
     setattr(logging, "TRACE", TRACE)
 
     def trace(self: logging.Logger, msg, *args, **kwargs):
         if self.isEnabledFor(TRACE):
+            kwargs.setdefault("stacklevel", 2)
             self._log(TRACE, msg, args, **kwargs)
 
     logging.Logger.trace = trace
 
 
 def setup_logging() -> None:
+    global _LOGGING_CONFIGURED
     setup_trace()
+    if _LOGGING_CONFIGURED:
+        return
     setup_logconfig()
+    _LOGGING_CONFIGURED = True
 
 
 def create_ssl_context() -> ssl.SSLContext:
@@ -76,16 +91,63 @@ def create_ssl_context() -> ssl.SSLContext:
 def run_command(
     cmd: Iterable[str],
     cwd: Path | None = None,
-    env: dict[str, str] | None = None,
+    env: Mapping[str, str] | None = None,
     timeout: int | float | None = None,
 ) -> str:
-    result = subprocess.run(
-        cmd,
-        cwd=cwd,
-        env=env,
-        check=True,
-        text=True,
-        capture_output=True,
-        timeout=timeout,
-    )
-    return (result.stdout + result.stderr).strip()
+    return SubprocessCommandRunner().run(cmd, cwd=cwd, env=env, timeout=timeout)
+
+
+def retry_http_request(
+    *,
+    url: str,
+    request_name: str,
+    logger: logging.Logger,
+    max_retries: int,
+    initial_backoff_seconds: float,
+    request: Callable[[], T],
+    should_retry_http_error: Callable[[HTTPError], bool],
+    retry_delay: Callable[[HTTPError, float], float],
+    is_retryable_url_error: Callable[[URLError], bool],
+) -> T:
+    backoff = initial_backoff_seconds
+    last_exc: Exception | None = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return request()
+        except HTTPError as exc:
+            last_exc = exc
+            if should_retry_http_error(exc) and attempt < max_retries:
+                wait_seconds = retry_delay(exc, backoff)
+                logger.debug(
+                    "%s to %s failed with HTTP %s on attempt %s/%s; sleeping for %ss",
+                    request_name,
+                    url,
+                    exc.code,
+                    attempt,
+                    max_retries,
+                    wait_seconds,
+                )
+                time.sleep(wait_seconds)
+                backoff *= 2
+                continue
+            raise
+        except URLError as exc:
+            last_exc = exc
+            if attempt < max_retries and is_retryable_url_error(exc):
+                logger.debug(
+                    "%s to %s failed on attempt %s/%s; sleeping for %ss",
+                    request_name,
+                    url,
+                    attempt,
+                    max_retries,
+                    backoff,
+                )
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+            raise
+    assert last_exc is not None
+    raise last_exc
+
+
+setup_trace()

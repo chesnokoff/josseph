@@ -1,4 +1,5 @@
 import argparse
+import logging
 import sys
 
 from josseph.utils import CONFIGS_DIR
@@ -33,7 +34,11 @@ def main() -> int:
     try:
         return RepositoryAnalysisPipeline().run(args)
     except (FileNotFoundError, ValueError) as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
+        logger = logging.getLogger("josseph.__main__")
+        if logger.hasHandlers():
+            logger.exception("Startup failed: %s", exc)
+        else:
+            print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
 if __name__ == "__main__":

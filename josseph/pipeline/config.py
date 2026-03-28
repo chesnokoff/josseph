@@ -35,15 +35,20 @@ class AnalysisConfig:
 def build_config(args) -> AnalysisConfig:
     config_path = Path(args.config_path).expanduser().resolve()
     raw = _read_yaml(config_path)
+    repositories = _parse_repositories(raw, config_path)
+    tools = _parse_tools(raw.get("tools"))
+    extractor_settings = _parse_extractor_settings(raw.get("extractor_settings"))
+    github_token = _parse_optional_string(raw.get("github_token"), "github_token")
+    if github_token is None:
+        github_token = os.environ.get("GITHUB_TOKEN")
 
     return AnalysisConfig(
         config_path=config_path,
-        repositories=_parse_repositories(raw, config_path),
+        repositories=repositories,
         clone_depth=_parse_clone_depth(raw.get("clone_depth")),
-        tools=_parse_tools(raw.get("tools")),
-        extractor_settings=_parse_extractor_settings(raw.get("extractor_settings")),
-        github_token=_parse_optional_string(raw.get("github_token"), "github_token")
-        or os.environ.get("GITHUB_TOKEN"),
+        tools=tools,
+        extractor_settings=extractor_settings,
+        github_token=github_token,
         workers=_parse_workers(raw.get("workers")),
     )
 
@@ -78,7 +83,9 @@ def _parse_repositories(raw: dict, config_path: Path) -> list[str]:
     if repositories_path_value is None:
         raise ValueError("'repositories' cannot be empty")
 
-    repositories_path = (config_path.parent / repositories_path_value).resolve()
+    repositories_path = (
+        config_path.parent / Path(repositories_path_value).expanduser()
+    ).resolve()
     repositories = read_repositories(repositories_path)
     if not repositories:
         raise ValueError(f"Repository list {repositories_path} is empty")
@@ -105,8 +112,27 @@ def _parse_clone_depth(value: object) -> int | None:
 
 
 def _parse_tools(value: object) -> list[str] | None:
-    tools = _parse_string_list(value, "tools") if value is not None else None
-    return tools or None
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        items = [value]
+    elif isinstance(value, list):
+        items = value
+    else:
+        raise ValueError("'tools' must be a string or a list of strings")
+
+    parsed: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        tool_name = _parse_optional_string(item, "tools")
+        if tool_name is None:
+            raise ValueError("'tools' cannot contain empty tool names")
+        if tool_name in seen:
+            continue
+        seen.add(tool_name)
+        parsed.append(tool_name)
+    return parsed or None
 
 
 def _parse_workers(value: object) -> int:

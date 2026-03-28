@@ -24,24 +24,17 @@ class RepositoryAnalysisPipeline:
 
     def run(self, args) -> int:
         setup_logging()
+        try:
+            config = build_config(args)
+        except (FileNotFoundError, ValueError):
+            self.log.exception("Failed to load pipeline configuration")
+            return 2
 
-        config = build_config(args)
         self.log.info("Loaded configuration from %s", config.config_path)
         run_reporter = RunReportCollector(config=config, results_dir=RESULTS_DIR)
         exit_code = 1
         try:
-            env = dict(os.environ)
-            if config.github_token:
-                env["GITHUB_TOKEN"] = config.github_token
-            command_runner = SubprocessCommandRunner()
-            registry = self._build_registry(
-                env,
-                command_runner,
-                extractor_settings=config.extractor_settings,
-            )
-            extractors = select_extractors(registry, config.tools)
             repos = config.repositories
-
             if not repos:
                 self.log.info("No repositories to process.")
                 exit_code = 0
@@ -49,6 +42,22 @@ class RepositoryAnalysisPipeline:
 
             if config.workers < 1:
                 raise ValueError("'workers' must be a positive integer")
+
+            env = dict(os.environ)
+            if config.github_token:
+                env["GITHUB_TOKEN"] = config.github_token
+            command_runner = SubprocessCommandRunner()
+            try:
+                registry = self._build_registry(
+                    env,
+                    command_runner,
+                    extractor_settings=config.extractor_settings,
+                )
+                extractors = select_extractors(registry, config.tools)
+            except (FileNotFoundError, ValueError):
+                self.log.exception("Failed to prepare pipeline runtime")
+                exit_code = 2
+                return 2
 
             analyzer = RepositoryAnalyzer(
                 cloner=RepositoryCloner(PROJECTS_DIR, command_runner),

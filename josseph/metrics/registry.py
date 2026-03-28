@@ -39,6 +39,9 @@ class ExtractorRegistry:
         self._extractors: dict[str, MetricExtractor] = {}
 
     def get(self, name: str) -> MetricExtractor:
+        name = name.strip()
+        if not name:
+            raise KeyError("Metric tool name cannot be empty")
         if name in self._extractors:
             return self._extractors[name]
 
@@ -77,6 +80,7 @@ def discover_extractors(package_name: str) -> dict[str, ExtractorFactory]:
             raise ValueError(
                 f"Extractor module '{module.__name__}' must define a non-empty EXTRACTOR_NAME"
             )
+        extractor_name = extractor_name.strip()
         if not callable(factory):
             raise ValueError(
                 f"Extractor module '{module.__name__}' must define build_extractor(context, settings)"

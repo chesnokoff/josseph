@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from josseph.pipeline.analyzer import RepositoryAnalyzer
 from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
+from josseph.utils import AnalysisError
 
 
 class FakeCommandRunner:
@@ -45,6 +46,35 @@ class ApiExtractor:
     def run(self, target):
         self.targets.append(target)
         return [{"stars": 42}]
+
+
+class FailingApiExtractor:
+    requires_checkout = False
+
+    def run(self, target):
+        raise AnalysisError("github api down")
+
+
+class RecordingRunReporter:
+    def __init__(self):
+        self.failures = []
+
+    def record_extractor_failure(
+        self,
+        *,
+        repo_url,
+        project_name,
+        extractor_name,
+        reason,
+    ):
+        self.failures.append(
+            {
+                "repo_url": repo_url,
+                "project_name": project_name,
+                "extractor_name": extractor_name,
+                "reason": reason,
+            }
+        )
 
 
 def test_repository_analyzer_persists_commit_hash_for_checkout_extractors(tmp_path):
@@ -95,3 +125,32 @@ def test_repository_analyzer_passes_domain_target_to_api_extractors(tmp_path):
     assert datetime.fromisoformat(
         metadata["collected_at_utc"].replace("Z", "+00:00")
     ).tzinfo == timezone.utc
+
+
+def test_repository_analyzer_records_extractor_failures_and_continues(tmp_path):
+    ok_extractor = ApiExtractor()
+    failing_extractor = FailingApiExtractor()
+    reporter = RecordingRunReporter()
+    analyzer = RepositoryAnalyzer(
+        cloner=FakeCloner(tmp_path / "checkout"),
+        result_manager=ResultDirectoryManager(tmp_path / "results"),
+        result_writer=ResultWriter(),
+        extractors={"github": ok_extractor, "sonar": failing_extractor},
+        command_runner=FakeCommandRunner(),
+        run_reporter=reporter,
+    )
+
+    analyzer.analyze("https://github.com/example/repo.git", clone_depth=None)
+
+    result_dir = tmp_path / "results" / "example@repo"
+    assert (result_dir / "github.parquet").is_file()
+    assert (result_dir / "github.json").is_file()
+    assert not (result_dir / "sonar.parquet").exists()
+    assert reporter.failures == [
+        {
+            "repo_url": "https://github.com/example/repo.git",
+            "project_name": "example@repo",
+            "extractor_name": "sonar",
+            "reason": "AnalysisError: github api down",
+        }
+    ]

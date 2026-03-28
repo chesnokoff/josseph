@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -9,6 +10,9 @@ from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
 from josseph.metrics.registry import ExtractorFactoryContext
 from josseph.process import CommandRunner
+from josseph.process import CommandExecutionError
+from josseph.process import clean_command_stream
+from josseph.process import describe_command_failure
 from josseph.utils import AnalysisError
 
 EXTRACTOR_NAME = "ck"
@@ -29,21 +33,14 @@ class CkExtractor(MetricExtractor):
         repo_path = _require_checkout(target)
         with tempfile.TemporaryDirectory() as temp_dir_name:
             temp_dir = Path(temp_dir_name)
-            self.log.info(f"Running CK metrics on {repo_path}")
+            self.log.info("Running CK metrics on %s", repo_path)
 
-            try:
-                self.log.trace(
-                    self._command_runner.run(
-                        ["java", "-jar", str(self.ck_jar), str(repo_path), "true", "0", "false", str(temp_dir) + "/"]
-                    )
-                )
-            except Exception as exc:
-                raise AnalysisError(f"CK execution failed: {exc}") from exc
+            self._run_ck_command(repo_path, temp_dir)
 
             csv_file = temp_dir / "class.csv"
 
             if not csv_file.exists():
-                raise AnalysisError(f"CM metrics output file not found: {csv_file}")
+                raise AnalysisError(f"CK metrics output file not found: {csv_file}")
 
             metrics = []
 
@@ -51,6 +48,29 @@ class CkExtractor(MetricExtractor):
                 for row in csv.DictReader(fh):
                     metrics.append(row)
             return metrics
+
+    def _run_ck_command(self, repo_path: Path, temp_dir: Path) -> None:
+        command = [
+            "java",
+            "-jar",
+            str(self.ck_jar),
+            str(repo_path),
+            "true",
+            "0",
+            "false",
+            f"{temp_dir}/",
+        ]
+        try:
+            output = self._command_runner.run(command)
+        except AnalysisError:
+            raise
+        except (CommandExecutionError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            raise AnalysisError(describe_command_failure("CK", command, exc)) from exc
+        except Exception as exc:
+            raise AnalysisError(f"CK execution failed: {exc}") from exc
+
+        if output:
+            self.log.log(5, "CK command output for %s:\n%s", repo_path, clean_command_stream(output).strip())
 
 
 def _require_checkout(target: AnalysisTarget) -> Path:

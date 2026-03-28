@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import logging
+import re
 import shlex
 import subprocess
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
 from josseph.metrics.registry import ExtractorFactoryContext
+from josseph.process import CommandExecutionError
 from josseph.process import CommandRunner
+from josseph.process import clean_command_stream
+from josseph.process import describe_command_failure
 from josseph.providers.sonar import SonarClient
 from josseph.utils import AnalysisError
 
@@ -56,6 +61,7 @@ class SonarScannerSettings:
 
 class SonarScanner:
     def __init__(self, *, command_runner: CommandRunner, settings: SonarScannerSettings) -> None:
+        self.log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._command_runner = command_runner
         self._settings = settings
 
@@ -71,22 +77,25 @@ class SonarScanner:
             *shlex.split(self._settings.options),
         ]
         try:
-            self._command_runner.run(
+            output = self._command_runner.run(
                 scanner_command,
                 env=self._settings.environment,
                 cwd=repo_path,
             )
-        except subprocess.CalledProcessError as exc:
-            stdout = (exc.stdout or "").strip()
-            stderr = (exc.stderr or "").strip()
-            details = "\n".join(part for part in (stdout, stderr) if part)
-            if details:
-                raise AnalysisError(
-                    f"sonar-scanner failed with exit code {exc.returncode}:\n{details}"
-                ) from exc
-            raise AnalysisError(
-                f"sonar-scanner failed with exit code {exc.returncode} and no output"
-            ) from exc
+        except AnalysisError:
+            raise
+        except (CommandExecutionError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            raise AnalysisError(describe_command_failure("sonar-scanner", scanner_command, exc)) from exc
+        except Exception as exc:
+            raise AnalysisError(f"sonar-scanner failed: {exc}") from exc
+
+        if output:
+            self.log.log(
+                5,
+                "sonar-scanner output for %s:\n%s",
+                repo_path,
+                clean_command_stream(output).strip(),
+            )
 
 
 class SonarExtractor(MetricExtractor):
@@ -119,12 +128,21 @@ class SonarExtractor(MetricExtractor):
 
     def run(self, target: AnalysisTarget) -> list[dict[str, str]]:
         repo_path = _require_checkout(target)
-        sonar_project_key = target.project_name.replace("@", "_")
+        sonar_project_key = _build_sonar_project_key(target)
+        created_project = False
 
         try:
             self.client.wait_for_status("UP", timeout=180)
             self.client.ensure_admin_password()
-            self.client.create_project(sonar_project_key, sonar_project_key)
+            created_project = self.client.create_project(
+                sonar_project_key,
+                target.project_name,
+            )
+            if not created_project:
+                raise AnalysisError(
+                    f"Refusing to reuse pre-existing SonarQube project {sonar_project_key} "
+                    f"for {target.project_name}."
+                )
             token = self.client.generate_token()
             self._scanner.run(repo_path, sonar_project_key, token)
             self.client.wait_for_analysis(sonar_project_key)
@@ -132,10 +150,11 @@ class SonarExtractor(MetricExtractor):
         except Exception as exc:
             raise AnalysisError(f"Sonar scan failed for {repo_path}: {exc}") from exc
         finally:
-            try:
-                self.client.delete_project(sonar_project_key)
-            except Exception as exc:
-                self.log.warning("Failed to cleanup project %s: %s", sonar_project_key, exc)
+            if created_project:
+                try:
+                    self.client.delete_project(sonar_project_key)
+                except Exception as exc:
+                    self.log.warning("Failed to cleanup project %s: %s", sonar_project_key, exc)
 
         return [self._convert_sonar_metrics(metrics)]
 
@@ -148,7 +167,7 @@ class SonarExtractor(MetricExtractor):
             value = measure.get("value")
             if not key:
                 continue
-            result[key] = value
+            result[key] = "" if value is None else str(value)
 
         return result
 
@@ -176,6 +195,12 @@ def _require_checkout(target: AnalysisTarget) -> Path:
     if target.checkout_path is None:
         raise AnalysisError("Sonar extractor requires a local repository checkout.")
     return target.checkout_path
+
+
+def _build_sonar_project_key(target: AnalysisTarget) -> str:
+    base_name = re.sub(r"[^A-Za-z0-9._:-]+", "_", target.project_name.replace("@", "_"))
+    commit_part = (target.commit_hash or "workspace")[:12]
+    return f"{base_name}_{commit_part}_{uuid4().hex[:8]}"
 
 
 def build_extractor(

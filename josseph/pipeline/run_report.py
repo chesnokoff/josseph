@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 
+from josseph.domain.repository import RepositoryRef
 from josseph.pipeline.config import AnalysisConfig
 
 
@@ -81,11 +82,17 @@ class RunReportCollector:
         )
 
     def record_repository_failure(self, *, repo_url: str, reason: str) -> None:
+        project_name: str | None = None
+        try:
+            project_name = RepositoryRef.parse(repo_url).project_name
+        except Exception:  # noqa: BLE001 - failure reporting must not fail the run
+            pass
         self._record_event(
             self._failed_runs,
             {
                 "scope": "repository",
                 "repo_url": repo_url,
+                "project_name": project_name,
                 "reason": reason,
             },
         )
@@ -93,9 +100,21 @@ class RunReportCollector:
     def write_summary(self, *, finished_at: datetime | None = None, exit_code: int) -> Path:
         finished = (finished_at or datetime.now(timezone.utc)).astimezone(timezone.utc)
         duration_seconds = round((finished - self._started_at).total_seconds(), 3)
+        repository_failures = [
+            event for event in self._failed_runs if event.get("scope") == "repository"
+        ]
+        extractor_failures = [
+            event for event in self._failed_runs if event.get("scope") == "extractor"
+        ]
+        affected_repositories = {
+            event["repo_url"]
+            for event in [*self._skipped_runs, *self._failed_runs]
+            if "repo_url" in event
+        }
 
         payload = {
             "run_id": self._run_id,
+            "status": "success" if exit_code == 0 else "failed",
             "started_at_utc": _format_utc(self._started_at),
             "finished_at_utc": _format_utc(finished),
             "duration_seconds": duration_seconds,
@@ -103,9 +122,14 @@ class RunReportCollector:
             "config": self._config.to_report_dict(),
             "summary": {
                 "repository_count": len(self._config.repositories),
+                "affected_repository_count": len(affected_repositories),
+                "repository_failure_count": len(repository_failures),
+                "extractor_failure_count": len(extractor_failures),
                 "failed_run_count": len(self._failed_runs),
                 "skipped_run_count": len(self._skipped_runs),
             },
+            "repository_failures": repository_failures,
+            "extractor_failures": extractor_failures,
             "failed_runs": list(self._failed_runs),
             "skipped_runs": list(self._skipped_runs),
         }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import socket
 import time
 import urllib.error
 import urllib.parse
@@ -9,9 +10,14 @@ import urllib.request
 from base64 import b64encode
 
 from josseph.utils import AnalysisError
+from josseph.utils import retry_http_request
 
 
 class SonarClient:
+    request_timeout_seconds = 30
+    max_retries = 3
+    initial_retry_backoff_seconds = 1.0
+
     def __init__(
         self,
         *,
@@ -28,12 +34,16 @@ class SonarClient:
 
     def wait_for_status(self, expected: str, timeout: int) -> None:
         start_time = time.time()
+        last_status = ""
         while time.time() - start_time < timeout:
-            status = self.get_system_status()
-            if status == expected:
+            last_status = self.get_system_status()
+            if last_status == expected:
                 return
             time.sleep(1)
-        raise AnalysisError(f"SonarQube did not reach status {expected} in {timeout} seconds.")
+        raise AnalysisError(
+            f"SonarQube did not reach status {expected} in {timeout} seconds "
+            f"(last status: {last_status or 'unknown'})."
+        )
 
     def get_system_status(self) -> str:
         response = self.request_json("GET", "/api/system/status")
@@ -57,7 +67,7 @@ class SonarClient:
                 return
             raise
 
-    def create_project(self, project_key: str, project_name: str) -> None:
+    def create_project(self, project_key: str, project_name: str) -> bool:
         try:
             self.request(
                 "POST",
@@ -65,10 +75,11 @@ class SonarClient:
                 auth=(self.admin_user, self.admin_password),
                 params={"name": project_name, "project": project_key},
             )
+            return True
         except AnalysisError as exc:
             if self._project_already_exists(exc):
                 self.log.debug("SonarQube project %s already exists.", project_key)
-                return
+                return False
             raise
 
     def generate_token(self) -> str:
@@ -85,6 +96,7 @@ class SonarClient:
 
     def wait_for_analysis(self, project_key: str, timeout: int = 120) -> None:
         start_time = time.time()
+        last_status = ""
         while time.time() - start_time < timeout:
             response = self.request_json(
                 "GET",
@@ -92,11 +104,14 @@ class SonarClient:
                 auth=(self.admin_user, self.admin_password),
                 params={"projectKey": project_key},
             )
-            status = response.get("projectStatus", {}).get("status")
-            if status and status != "NONE":
+            last_status = response.get("projectStatus", {}).get("status", "")
+            if last_status and last_status != "NONE":
                 return
             time.sleep(1)
-        raise AnalysisError("Timed out waiting for SonarQube analysis to finish.")
+        raise AnalysisError(
+            f"Timed out waiting for SonarQube analysis to finish for {project_key} "
+            f"(last status: {last_status or 'unknown'})."
+        )
 
     def fetch_metrics(self, project_key: str) -> dict[str, object]:
         metrics_payload = self.request_json(
@@ -137,6 +152,8 @@ class SonarClient:
         auth: tuple[str, str] | None = None,
         params: dict | None = None,
         data: dict | None = None,
+        timeout: int | float | None = None,
+        max_retries: int | None = None,
     ) -> bytes:
         url = self._build_url(path, params)
         headers: dict[str, str] = {}
@@ -147,13 +164,26 @@ class SonarClient:
             payload = urllib.parse.urlencode(data).encode("utf-8")
             headers["Content-Type"] = "application/x-www-form-urlencoded"
         request = urllib.request.Request(url, method=method, headers=headers, data=payload)
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+        request_timeout = self.request_timeout_seconds if timeout is None else timeout
+        retries = self.max_retries if max_retries is None else max_retries
+        def perform_request() -> bytes:
+            with urllib.request.urlopen(request, timeout=request_timeout) as response:
                 return response.read()
+
+        try:
+            return retry_http_request(
+                url=url,
+                request_name="SonarQube request",
+                logger=self.log,
+                max_retries=retries,
+                initial_backoff_seconds=self.initial_retry_backoff_seconds,
+                request=perform_request,
+                should_retry_http_error=self._should_retry_http_error,
+                retry_delay=self._retry_delay,
+                is_retryable_url_error=self._is_retryable_url_error,
+            )
         except urllib.error.HTTPError as exc:
-            raise AnalysisError(
-                f"HTTP error {exc.code} for {url}: {exc.read().decode('utf-8', errors='ignore')}"
-            ) from exc
+            raise AnalysisError(self._format_http_error(url, exc)) from exc
         except urllib.error.URLError as exc:
             raise AnalysisError(f"Failed to reach SonarQube at {url}: {exc}") from exc
 
@@ -200,3 +230,29 @@ class SonarClient:
     def _project_already_exists(exc: AnalysisError) -> bool:
         message = str(exc).lower()
         return "already exists" in message or "could not create project" in message
+
+    @staticmethod
+    def _should_retry_http_error(exc: urllib.error.HTTPError) -> bool:
+        return exc.code in {429, 500, 502, 503, 504}
+
+    @staticmethod
+    def _retry_delay(exc: urllib.error.HTTPError, fallback: float) -> float:
+        retry_after = exc.headers.get("Retry-After")
+        if retry_after and retry_after.isdigit():
+            return max(int(retry_after), int(fallback))
+        return fallback
+
+    @staticmethod
+    def _is_retryable_url_error(exc: urllib.error.URLError) -> bool:
+        reason = exc.reason
+        return isinstance(reason, (TimeoutError, socket.timeout)) or getattr(
+            reason,
+            "__class__",
+            None,
+        ).__name__ in {"TimeoutError", "ConnectionResetError", "BrokenPipeError"}
+
+    @staticmethod
+    def _format_http_error(url: str, exc: urllib.error.HTTPError) -> str:
+        body = exc.read().decode("utf-8", errors="ignore").strip()
+        details = f": {body}" if body else ""
+        return f"HTTP error {exc.code} for {url}{details}"

@@ -1,10 +1,10 @@
 import logging
-from urllib.error import HTTPError, URLError
 
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
 from josseph.metrics.registry import ExtractorFactoryContext
 from josseph.providers.github import GithubClient
+from josseph.utils import AnalysisError
 
 EXTRACTOR_NAME = "github"
 
@@ -23,9 +23,12 @@ class GithubExtractor(MetricExtractor):
 
         try:
             repo_data = self.client.get_repo(slug)
-        except (HTTPError, RuntimeError, URLError) as exc:
-            self.log.warning(f"Failed to fetch repository metadata for {slug}: {exc}")
-            return []
+        except AnalysisError as exc:
+            self.log.warning("Failed to fetch repository metadata for %s: %s", slug, exc)
+            raise AnalysisError(f"Failed to fetch repository metadata for {slug}: {exc}") from exc
+        except Exception as exc:
+            self.log.warning("Failed to fetch repository metadata for %s: %s", slug, exc)
+            raise AnalysisError(f"Failed to fetch repository metadata for {slug}: {exc}") from exc
 
         metrics = self._format_repo_metrics(repo_data, slug)
 
