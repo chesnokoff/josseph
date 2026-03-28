@@ -1,8 +1,8 @@
 # Examples
 
-Use these examples as a starting point.
+These examples show real artifact shapes and failure handling.
 
-## Example 1: GitHub and CK only
+## Example 1: Metadata-only run
 
 Config:
 
@@ -10,8 +10,6 @@ Config:
 repositories: configs/repos.txt
 tools:
   - github
-  - ck
-clone_depth: 1
 workers: 2
 github_token: ghp_example
 ```
@@ -22,17 +20,54 @@ Run:
 docker compose run --rm josseph configs/run.yaml
 ```
 
-Result files:
+Expected repository artifact set:
 
 ```text
 results/example@project/github.parquet
 results/example@project/github.json
-results/example@project/ck.parquet
-results/example@project/ck.json
 results/runs/20260322T150000Z/summary.json
 ```
 
-## Example 2: Add Sonar
+Example `github.json`:
+
+```json
+{
+  "commit_hash": "",
+  "collected_at_utc": "2026-03-22T12:34:56Z"
+}
+```
+
+Example row inside `github.parquet`:
+
+```json
+{
+  "full_name": "example/project",
+  "description": "Metrics demo repository",
+  "default_branch": "main",
+  "language": "Java",
+  "license": "Apache-2.0",
+  "homepage": "",
+  "stargazers_count": 42,
+  "watchers_count": 42,
+  "subscribers_count": 7,
+  "forks_count": 5,
+  "network_count": 5,
+  "open_issues_total": 3,
+  "has_issues": true,
+  "has_wiki": false,
+  "has_pages": false,
+  "is_fork": false,
+  "archived": false,
+  "disabled": false,
+  "size_kb": 2048,
+  "created_at": "2025-01-01T10:00:00Z",
+  "updated_at": "2026-03-20T11:00:00Z",
+  "pushed_at": "2026-03-22T12:00:00Z",
+  "topics": "metrics,java"
+}
+```
+
+## Example 2: Mixed checkout-free and checkout-based extractors
 
 Config:
 
@@ -42,57 +77,101 @@ tools:
   - github
   - ck
   - cm
-  - sonar
 clone_depth: 1
 workers: 2
-github_token: ghp_example
 extractor_settings:
   cm:
     timeout_seconds: 1800
-  sonar:
-    host_url: http://localhost:9234
 ```
 
-Run:
+Execution model for each repository:
 
-```bash
-docker compose up -d sonarqube
-docker compose run --rm josseph configs/run.yaml
-```
+1. Run `github` without checkout.
+2. Clone repository with up to 3 attempts.
+3. Resolve `git rev-parse HEAD`.
+4. Run `ck`.
+5. Run `cm`.
+6. Persist `<tool>.parquet` and `<tool>.json` for each successful extractor.
 
-## Example output
+## Example 3: Partial extractor failure with successful run
 
-The exact columns depend on the tool, but the files always follow the same
-pattern:
+Suppose `github` succeeds and `sonar` fails because SonarQube is unavailable.
 
-```text
-results/example@project/github.parquet
-results/example@project/github.json
-results/runs/20260322T150000Z/summary.json
-```
-
-The JSON metadata next to each Parquet file looks like:
+Example `summary.json`:
 
 ```json
 {
-  "commit_hash": "abc123",
-  "collected_at_utc": "2026-03-22T12:34:56Z"
-}
-```
-
-And the run summary includes counts and failure lists:
-
-```json
-{
+  "run_id": "20260322T150000Z",
   "status": "success",
+  "started_at_utc": "2026-03-22T15:00:00Z",
+  "finished_at_utc": "2026-03-22T15:00:12Z",
+  "duration_seconds": 12.0,
   "exit_code": 0,
   "summary": {
     "repository_count": 1,
-    "affected_repository_count": 0,
+    "affected_repository_count": 1,
     "repository_failure_count": 0,
-    "extractor_failure_count": 0,
-    "failed_run_count": 0,
+    "extractor_failure_count": 1,
+    "failed_run_count": 1,
     "skipped_run_count": 0
-  }
+  },
+  "extractor_failures": [
+    {
+      "scope": "extractor",
+      "repo_url": "https://github.com/example/repo.git",
+      "project_name": "example@repo",
+      "extractor": "sonar",
+      "reason": "AnalysisError: scanner unavailable",
+      "recorded_at_utc": "2026-03-22T15:00:04Z"
+    }
+  ],
+  "failed_runs": [
+    {
+      "scope": "extractor",
+      "repo_url": "https://github.com/example/repo.git",
+      "project_name": "example@repo",
+      "extractor": "sonar",
+      "reason": "AnalysisError: scanner unavailable",
+      "recorded_at_utc": "2026-03-22T15:00:04Z"
+    }
+  ]
+}
+```
+
+Operational meaning:
+
+- the process completed
+- at least one extractor failed
+- successful artifacts from other extractors remain valid
+- downstream consumers must consult `summary.json` before assuming completeness
+
+## Example 4: Repository failure with non-zero exit
+
+If clone or checkout resolution fails for a repository, the run ends with exit
+code `1`.
+
+Example excerpt:
+
+```json
+{
+  "status": "failed",
+  "exit_code": 1,
+  "summary": {
+    "repository_count": 1,
+    "affected_repository_count": 1,
+    "repository_failure_count": 1,
+    "extractor_failure_count": 1,
+    "failed_run_count": 2,
+    "skipped_run_count": 0
+  },
+  "repository_failures": [
+    {
+      "scope": "repository",
+      "repo_url": "https://github.com/example/repo.git",
+      "project_name": "example@repo",
+      "reason": "clone failed",
+      "recorded_at_utc": "2026-03-22T15:00:01Z"
+    }
+  ]
 }
 ```

@@ -1,22 +1,32 @@
 # Getting Started
 
-This page walks through the shortest useful path from "no setup" to "I have
-results".
+This page gets you from an empty workspace to a run you can verify.
 
-## 1. Prepare a repository list
+## 1. Create the repository list
 
-Create a text file with one repository per line:
+The repository file is a plain text input artifact. JOSSeph reads one URL per
+line, ignores blank lines, ignores lines starting with `#`, and removes
+duplicates after loading.
 
 ```text
-https://github.com/example/project.git
-https://github.com/example/another-project.git
+# configs/repos.txt
+https://github.com/apache/airflow.git
+https://github.com/apache/spark.git
+https://github.com/apache/airflow.git
 ```
 
-Blank lines and `#` comments are okay.
+The effective repository set for this file is:
 
-## 2. Create a config file
+```json
+[
+  "https://github.com/apache/airflow.git",
+  "https://github.com/apache/spark.git"
+]
+```
 
-Start with this:
+## 2. Create the config
+
+Use a small config first:
 
 ```yaml
 repositories: configs/repos.txt
@@ -27,43 +37,108 @@ clone_depth: 1
 workers: 2
 ```
 
-Save it as something like `configs/run.yaml`.
+Contract:
 
-## 3. Run JOSSeph
+- `repositories` is required and must point to a file
+- `tools` is optional; omitted means "all registered extractors"
+- `clone_depth` must be a positive integer when set
+- `workers` must be a positive integer when set
 
-Use the config path as the last argument:
+## 3. Run the pipeline
+
+JOSSeph is Docker-first. The standard way to run it is:
 
 ```bash
 docker compose run --rm josseph configs/run.yaml
 ```
 
-If you want to run it locally instead of through Docker:
+You can run the module directly for development or debugging, but that is a
+fallback path, not the primary operating model:
 
 ```bash
 python -m josseph configs/run.yaml
 ```
 
-## 4. Find the results
+## 4. Verify artifacts, not just console output
 
-After a successful run, look under `results/`:
+After a successful run, expect artifacts like:
 
 ```text
 results/
-  example@project/
+  apache@airflow/
+    github.parquet
+    github.json
+    ck.parquet
+    ck.json
+  apache@spark/
     github.parquet
     github.json
     ck.parquet
     ck.json
   runs/
-    <run-id>/
+    20260328T120000Z/
       summary.json
 ```
 
-## 5. If you use GitHub or Sonar
+Open `results/runs/<run-id>/summary.json` first. A healthy run looks like:
 
-Some tools need extra setup:
+```json
+{
+  "status": "success",
+  "exit_code": 0,
+  "summary": {
+    "repository_count": 2,
+    "affected_repository_count": 0,
+    "repository_failure_count": 0,
+    "extractor_failure_count": 0,
+    "failed_run_count": 0,
+    "skipped_run_count": 0
+  }
+}
+```
 
-- `github` works best with a token in `github_token` or `GITHUB_TOKEN`
-- `sonar` needs a reachable SonarQube server
+## 5. Know what failure looks like
 
-If you do not need those tools, leave them out of `tools:`.
+If `ck` fails on `apache@spark` but `github` succeeds, the run can still finish.
+What changes:
+
+- `results/apache@spark/github.parquet` may exist
+- `results/apache@spark/ck.parquet` may be missing
+- `summary.json` records the extractor failure
+- process exit code can still be `0`
+
+Example:
+
+```json
+{
+  "status": "success",
+  "exit_code": 0,
+  "summary": {
+    "repository_count": 2,
+    "affected_repository_count": 1,
+    "repository_failure_count": 0,
+    "extractor_failure_count": 1,
+    "failed_run_count": 1,
+    "skipped_run_count": 0
+  },
+  "extractor_failures": [
+    {
+      "scope": "extractor",
+      "repo_url": "https://github.com/apache/spark.git",
+      "project_name": "apache@spark",
+      "extractor": "ck",
+      "reason": "CK execution failed with exit code 1: java -jar ...",
+      "recorded_at_utc": "2026-03-28T12:01:04Z"
+    }
+  ]
+}
+```
+
+## 6. Add service-backed extractors only when ready
+
+- `github` works best with `github_token` or `GITHUB_TOKEN`
+- `sonar` requires a reachable SonarQube instance
+- `ck` and `cm` require their vendored JARs to exist
+
+If those prerequisites are missing, the correct expectation is failure reporting,
+not silent fallback.

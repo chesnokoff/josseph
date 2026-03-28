@@ -2,13 +2,20 @@
 
 ## Do I need Docker?
 
-No. Docker is the default path, but you can also run:
+For normal use, yes. JOSSeph is Docker-first, and the documented execution path
+is:
+
+```bash
+docker compose run --rm josseph configs/run.yaml
+```
+
+Direct module execution exists for development and debugging:
 
 ```bash
 python -m josseph configs/run.yaml
 ```
 
-## What should I put in `repositories`?
+## What exactly goes into `repositories`?
 
 A text file with one repository URL per line.
 
@@ -16,15 +23,31 @@ A text file with one repository URL per line.
 https://github.com/example/project.git
 ```
 
-## Why is a result missing?
+Blank lines and `#` comments are ignored. Duplicate URLs are removed after
+loading.
 
-Usually one of these:
+## Why is a result missing for one tool?
 
-- the tool was not selected in `tools:`
-- the tool failed for that repository
-- the result was already cached and reused
+Check the strict cases first:
 
-Check `results/runs/<run-id>/summary.json` for details.
+- the tool was not selected
+- the extractor failed and therefore wrote no artifacts
+- only one of `<tool>.parquet` or `<tool>.json` exists, so the result is incomplete
+- the result was already cached and skipped
+
+The source of truth is `results/runs/<run-id>/summary.json`.
+
+## Why did the process exit `0` even though one extractor failed?
+
+Because extractor failures are non-fatal by design. Exit code `1` is reserved
+for repository-level failures. Use `summary.extractor_failure_count` and
+`failed_runs` to detect incomplete runs.
+
+## Why is there no `summary.json` at all?
+
+The most likely cause is config loading failure before the run reporter was
+created. Typical examples are missing config file, invalid YAML, or missing
+`repositories`.
 
 ## Can I run only one tool?
 
@@ -36,21 +59,8 @@ tools:
   - github
 ```
 
-## What if I use Sonar?
+## What should I verify after a run?
 
-Start SonarQube first, then run JOSSeph.
-
-```bash
-docker compose up -d sonarqube
-docker compose run --rm josseph configs/run.yaml
-```
-
-## How do I know the run finished?
-
-Look for the run summary:
-
-```text
-results/runs/<run-id>/summary.json
-```
-
-If it exists, the run reached the reporting step.
+1. exit code
+2. `results/runs/<run-id>/summary.json`
+3. expected `<tool>.parquet` and `<tool>.json` pairs for each repository
