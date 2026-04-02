@@ -35,9 +35,7 @@ docker compose build josseph
 docker compose up -d sonarqube
 ```
 
-3. Configure the run in `configs/config.yaml`.
-
-Example:
+3. Run the checked-in sample config in `configs/config.yaml`.
 
 ```yaml
 tools:
@@ -45,15 +43,14 @@ tools:
   - cm
   - github
   - sonar
-clone_depth: 1
 workers: 1
-repositories: ../../.oss-metrics-data/repos.txt
+repositories: repositories/one-repo.txt
 ```
 
-4. Run the pipeline:
+4. Run the pipeline against that config:
 
 ```bash
-docker compose run --rm josseph
+docker compose run --rm josseph configs/config.yaml
 ```
 
 ## Configuration Format
@@ -62,12 +59,13 @@ The container reads `/app/configs/config.yaml` by default.
 Supported keys:
 - `tools`: optional list of extractors (`ck`, `cm`, `github`, `sonar`); omitted means all
 - `extractor_settings`: optional mapping of extractor name to extractor-specific settings
-- `clone_depth`: optional positive integer for shallow clone depth
 - `workers`: optional positive integer; omitted means CPU count
 - `github_token`: optional token value; if omitted, `GITHUB_TOKEN` from the environment is used
-- `repositories`: path to a text file with one repository URL per line
+- `repositories`: path to a text or YAML file with repository entries; YAML entries may include an optional `commit`
 
 Path in `repositories` is resolved relative to the YAML file.
+Pinned commits are only supported when they are reachable from the repository's
+default branch.
 
 ## Outputs
 Results are written to:
@@ -75,8 +73,12 @@ Results are written to:
 - `results/<owner>@<repo>/cm.parquet`
 - `results/<owner>@<repo>/github.parquet`
 - `results/<owner>@<repo>/sonar.parquet`
-- `results/<owner>@<repo>/*.json` (metadata with `commit_hash` and `collected_at_utc`)
+- `results/<owner>@<repo>/*.json` (metadata with `commit_hash`, `requested_commit_hash`, `metric_binding`, and `collected_at_utc`)
 - `results/runs/<run-id>/summary.json` (pipeline-level run metadata)
+
+Results are stored per repository, not per repository revision. A later run for
+the same repository can overwrite earlier artifacts; the requested commit is
+captured in per-tool metadata and in the run summary.
 
 A metric is considered complete only when both files exist:
 - `results/<owner>@<repo>/<tool>.parquet`
@@ -103,7 +105,7 @@ docker compose down
 
 ## Notes
 - This setup is container-first for reproducibility.
-- Operational input data and temporary cloned repositories live outside the repo in `../.oss-metrics-data/`.
+- Cloned repositories live in `workspace/projects/` by default and are mounted into the container from `./workspace`.
 - Analysis helpers and operational scripts live outside the repo in `../.oss-metrics-tools/`.
 - `GITHUB_TOKEN` is passed from host environment into `josseph` via `docker-compose.yml`.
 - `sonar` analysis may be slower on large repositories.
@@ -117,6 +119,8 @@ docker compose down
   - `1`: one or more repositories failed during analysis
   - `2`: invalid user input/configuration (for example, unknown tool)
 - Cached results are reused only when both `<tool>.parquet` and `<tool>.json` are present.
+- `observation-bound` extractors are still cacheable by file presence; use
+  `--force` to recollect them.
 
 ## Extensibility API
 To add a new metrics source:
@@ -126,7 +130,10 @@ To add a new metrics source:
    - implement `build_extractor(context, settings)`
    - implement an extractor class that subclasses `MetricExtractor`
 3. List the extractor name under `tools:` in the YAML config.
-4. Pass extractor-specific parameters under `extractor_settings:` when needed.
+4. Set `metric_binding` on the extractor class:
+   - default is `revision-bound`
+   - use `observation-bound` for time-dependent extractors
+5. Pass extractor-specific parameters under `extractor_settings:` when needed.
 
 Example:
 
@@ -150,6 +157,7 @@ EXTRACTOR_NAME = "my_extractor"
 
 class MyExtractor(MetricExtractor):
     requires_checkout = False
+    metric_binding = "revision-bound"
 
     def __init__(self, threshold: int) -> None:
         self.threshold = threshold

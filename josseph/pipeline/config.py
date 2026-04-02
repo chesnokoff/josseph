@@ -7,14 +7,14 @@ from pathlib import Path
 
 import yaml
 
+from josseph.domain.repository import RepositorySpec
 from josseph.pipeline.repositories import read_repositories
 
 
 @dataclass(frozen=True)
 class AnalysisConfig:
     config_path: Path
-    repositories: list[str]
-    clone_depth: int | None
+    repositories: list[RepositorySpec]
     tools: list[str] | None
     extractor_settings: dict[str, dict[str, object]]
     github_token: str | None
@@ -23,8 +23,7 @@ class AnalysisConfig:
     def to_report_dict(self) -> dict[str, object]:
         return {
             "config_path": str(self.config_path),
-            "repositories": list(self.repositories),
-            "clone_depth": self.clone_depth,
+            "repositories": [repository.to_report_dict() for repository in self.repositories],
             "tools": list(self.tools) if self.tools is not None else None,
             "extractor_settings": dict(self.extractor_settings),
             "github_token": "***redacted***" if self.github_token else None,
@@ -35,6 +34,7 @@ class AnalysisConfig:
 def build_config(args) -> AnalysisConfig:
     config_path = Path(args.config_path).expanduser().resolve()
     raw = _read_yaml(config_path)
+    _reject_unsupported_fields(raw)
     repositories = _parse_repositories(raw, config_path)
     tools = _parse_tools(raw.get("tools"))
     extractor_settings = _parse_extractor_settings(raw.get("extractor_settings"))
@@ -45,7 +45,6 @@ def build_config(args) -> AnalysisConfig:
     return AnalysisConfig(
         config_path=config_path,
         repositories=repositories,
-        clone_depth=_parse_clone_depth(raw.get("clone_depth")),
         tools=tools,
         extractor_settings=extractor_settings,
         github_token=github_token,
@@ -71,7 +70,7 @@ def _read_yaml(config_path: Path) -> dict:
     return loaded
 
 
-def _parse_repositories(raw: dict, config_path: Path) -> list[str]:
+def _parse_repositories(raw: dict, config_path: Path) -> list[RepositorySpec]:
     repositories_value = raw.get("repositories")
     if repositories_value is None:
         raise ValueError("Configuration must define 'repositories' as a path to a file")
@@ -90,25 +89,6 @@ def _parse_repositories(raw: dict, config_path: Path) -> list[str]:
     if not repositories:
         raise ValueError(f"Repository list {repositories_path} is empty")
     return list(dict.fromkeys(repositories))
-
-
-def _parse_clone_depth(value: object) -> int | None:
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        raise ValueError("'clone_depth' must be a positive integer")
-    if isinstance(value, int):
-        if value < 1:
-            raise ValueError("'clone_depth' must be a positive integer")
-        return value
-    if isinstance(value, str):
-        stripped = value.strip()
-        if not stripped:
-            return None
-        if not stripped.isdigit() or int(stripped) < 1:
-            raise ValueError("'clone_depth' must be a positive integer")
-        return int(stripped)
-    raise ValueError("'clone_depth' must be a positive integer")
 
 
 def _parse_tools(value: object) -> list[str] | None:
@@ -206,3 +186,8 @@ def _parse_optional_string(value: object, field_name: str) -> str | None:
         raise ValueError(f"'{field_name}' must be a string")
     stripped = value.strip()
     return stripped or None
+
+
+def _reject_unsupported_fields(raw: dict[str, object]) -> None:
+    if "clone_depth" in raw:
+        raise ValueError("'clone_depth' is no longer supported")

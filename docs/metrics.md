@@ -13,7 +13,7 @@ JOSSeph currently ships four extractors. Each is a self-contained module under
 
 **What it measures:**
 
-CK computes class- and method-level static metrics for Java source code.
+CK computes class-oriented static metrics for Java source code.
 The most commonly used metrics include:
 
 | Metric | Description |
@@ -24,12 +24,11 @@ The most commonly used metrics include:
 | NOC | Number of Children (direct subclasses) |
 | RFC | Response For a Class — number of methods that can be invoked |
 | LCOM | Lack of Cohesion of Methods |
-| LOC | Lines of code (class and method level) |
+| LOC | Lines of code |
 | NOM | Number of Methods |
 | NOSI | Number of Static Invocations |
 
-CK emits one row per class and one row per method. Both are written as separate
-parquet files (see output docs for schema).
+The extractor writes one CK result set to a single parquet file.
 
 **Citation:** Aniche, M. (2021). *mauricioaniche/ck*. GitHub.
 
@@ -77,18 +76,28 @@ The `github` extractor calls the GitHub API to collect project-level metadata:
 
 | Field | Description |
 |-------|-------------|
-| stars | Repository stargazer count |
-| forks | Fork count |
-| watchers | Watcher count |
-| open_issues | Open issue count |
+| stargazers_count | Repository stargazer count |
+| watchers_count | Watcher count |
+| subscribers_count | Subscriber count |
+| forks_count | Fork count |
+| network_count | Network count |
+| open_issues_total | Open issue count |
+| size_kb | Repository size in KB |
+| full_name | Repository full name |
+| description | Repository description |
+| default_branch | Default branch name |
 | created_at | Repository creation timestamp |
 | pushed_at | Last push timestamp |
-| size | Repository size in KB |
 | language | Primary language reported by GitHub |
 | license | SPDX license identifier |
 | topics | Repository topic tags |
+| homepage | Project homepage URL |
+| has_issues | Whether issues are enabled |
 | has_wiki | Whether the wiki is enabled |
+| has_pages | Whether GitHub Pages is enabled |
+| is_fork | Whether the repository is a fork |
 | archived | Whether the repository is archived |
+| disabled | Whether the repository is disabled |
 
 **Authentication:** A `GITHUB_TOKEN` environment variable is strongly
 recommended to avoid rate limiting (5000 req/hour authenticated vs. 60
@@ -129,3 +138,14 @@ Without test data, `coverage` will be `0.0`.
 `docker compose up -d sonarqube`. JOSSeph creates a temporary project per
 repository, scans it, reads the measures, then deletes the project. Each run
 is isolated.
+
+**Concurrency:** SonarQube Community Edition has a single compute-engine worker.
+By default `concurrency` is `1`, which serialises scans across parallel
+repository threads. Increase it only if your SonarQube instance has additional
+compute-engine capacity:
+
+```yaml
+extractor_settings:
+  sonar:
+    concurrency: 2
+```

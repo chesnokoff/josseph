@@ -4,6 +4,5 @@ tools:
   - cm
   - github
   - sonar
-clone_depth: 1
 workers: 1
 repositories: repositories/one-repo.txt

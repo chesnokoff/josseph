@@ -49,6 +49,8 @@ class RunReportCollector:
         repo_url: str,
         project_name: str,
         extractor_name: str,
+        requested_commit_hash: str | None,
+        metric_binding: str,
         reason: str,
     ) -> None:
         self._record_event(
@@ -58,6 +60,8 @@ class RunReportCollector:
                 "repo_url": repo_url,
                 "project_name": project_name,
                 "extractor": extractor_name,
+                "requested_commit_hash": requested_commit_hash,
+                "metric_binding": metric_binding,
                 "reason": reason,
             },
         )
@@ -68,6 +72,8 @@ class RunReportCollector:
         repo_url: str,
         project_name: str,
         extractor_name: str,
+        requested_commit_hash: str | None,
+        metric_binding: str,
         reason: str,
     ) -> None:
         self._record_event(
@@ -77,11 +83,19 @@ class RunReportCollector:
                 "repo_url": repo_url,
                 "project_name": project_name,
                 "extractor": extractor_name,
+                "requested_commit_hash": requested_commit_hash,
+                "metric_binding": metric_binding,
                 "reason": reason,
             },
         )
 
-    def record_repository_failure(self, *, repo_url: str, reason: str) -> None:
+    def record_repository_failure(
+        self,
+        *,
+        repo_url: str,
+        requested_commit_hash: str | None,
+        reason: str,
+    ) -> None:
         project_name: str | None = None
         try:
             project_name = RepositoryRef.parse(repo_url).project_name
@@ -93,6 +107,7 @@ class RunReportCollector:
                 "scope": "repository",
                 "repo_url": repo_url,
                 "project_name": project_name,
+                "requested_commit_hash": requested_commit_hash,
                 "reason": reason,
             },
         )

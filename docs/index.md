@@ -44,16 +44,18 @@ results/
       summary.json
 ```
 
-`github.json` has a fixed shape:
+`github.json` has this excerpted shape:
 
 ```json
 {
   "commit_hash": "",
+  "requested_commit_hash": null,
+  "metric_binding": "observation-bound",
   "collected_at_utc": "2026-03-22T12:34:56Z"
 }
 ```
 
-`summary.json` is the run-level source of truth:
+`summary.json` is the run-level source of truth. Excerpt:
 
 ```json
 {
@@ -70,7 +72,11 @@ results/
     "extractor_failure_count": 0,
     "failed_run_count": 0,
     "skipped_run_count": 0
-  }
+  },
+  "repository_failures": [],
+  "extractor_failures": [],
+  "failed_runs": [],
+  "skipped_runs": []
 }
 ```
 

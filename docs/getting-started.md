@@ -4,12 +4,12 @@ This page gets you from an empty workspace to a run you can verify.
 
 ## 1. Create the repository list
 
-The repository file is a plain text input artifact. JOSSeph reads one URL per
-line, ignores blank lines, ignores lines starting with `#`, and removes
+The repository file can be plain text or YAML. Plain text inputs read one URL
+per line, ignore blank lines, ignore lines starting with `#`, and remove
 duplicates after loading.
 
 ```text
-# configs/repos.txt
+# configs/repositories/one-repo.txt
 https://github.com/apache/airflow.git
 https://github.com/apache/spark.git
 https://github.com/apache/airflow.git
@@ -24,24 +24,39 @@ The effective repository set for this file is:
 ]
 ```
 
+Pinned commits use YAML:
+
+```yaml
+- url: https://github.com/apache/airflow.git
+  commit: deadbeefcafebabe
+- https://github.com/apache/spark.git
+```
+
+The same repository cannot appear twice in one run with different pinned
+commits. The config validator rejects that input because outputs are stored per
+repository, not per revision.
+
 ## 2. Create the config
 
 Use a small config first:
 
 ```yaml
-repositories: configs/repos.txt
+repositories: repositories/one-repo.txt
 tools:
   - github
   - ck
-clone_depth: 1
 workers: 2
 ```
+
+Because this config lives under `configs/`, that repository path resolves to
+`configs/repositories/one-repo.txt`.
 
 Contract:
 
 - `repositories` is required and must point to a file
 - `tools` is optional; omitted means "all registered extractors"
-- `clone_depth` must be a positive integer when set
+- pinned commits are only supported when reachable from the repository's default branch
+- the same repository cannot appear twice in one run with different pinned commits
 - `workers` must be a positive integer when set
 
 ## 3. Run the pipeline
@@ -49,14 +64,14 @@ Contract:
 JOSSeph is Docker-first. The standard way to run it is:
 
 ```bash
-docker compose run --rm josseph configs/run.yaml
+docker compose run --rm josseph configs/config.yaml
 ```
 
 You can run the module directly for development or debugging, but that is a
 fallback path, not the primary operating model:
 
 ```bash
-python -m josseph configs/run.yaml
+python -m josseph configs/config.yaml
 ```
 
 ## 4. Verify artifacts, not just console output
@@ -106,12 +121,17 @@ What changes:
 - `results/apache@spark/ck.parquet` may be missing
 - `summary.json` records the extractor failure
 - process exit code can still be `0`
+- `observation-bound` extractors still use the same file-based cache unless you pass `--force`
 
-Example:
+Example excerpt:
 
 ```json
 {
+  "run_id": "20260322T150000Z",
   "status": "success",
+  "started_at_utc": "2026-03-22T15:00:00Z",
+  "finished_at_utc": "2026-03-22T15:00:12Z",
+  "duration_seconds": 12.0,
   "exit_code": 0,
   "summary": {
     "repository_count": 2,
@@ -127,12 +147,17 @@ Example:
       "repo_url": "https://github.com/apache/spark.git",
       "project_name": "apache@spark",
       "extractor": "ck",
+      "requested_commit_hash": null,
+      "metric_binding": "revision-bound",
       "reason": "CK execution failed with exit code 1: java -jar ...",
       "recorded_at_utc": "2026-03-28T12:01:04Z"
     }
   ]
 }
 ```
+
+The example below is intentionally partial; omitted fields are unchanged from
+the full schema.
 
 ## 6. Add service-backed extractors only when ready
 

@@ -36,6 +36,8 @@ Every successful extractor writes:
 ```json
 {
   "commit_hash": "abc123",
+  "requested_commit_hash": "abc123",
+  "metric_binding": "revision-bound",
   "collected_at_utc": "2026-03-22T12:34:56Z"
 }
 ```
@@ -44,6 +46,8 @@ Rules:
 
 - `commit_hash` is the resolved `HEAD` for checkout-based extractors
 - `commit_hash` is `""` for checkout-free runs such as `github`
+- `requested_commit_hash` records the repository input revision when one was pinned
+- `metric_binding` identifies `revision-bound` vs `observation-bound`
 - `collected_at_utc` is UTC and truncated to whole seconds
 
 ## Run summary contract
@@ -61,9 +65,11 @@ Example:
   "config": {
     "config_path": "/workspace/configs/run.yaml",
     "repositories": [
-      "https://github.com/example/repo.git"
+      {
+        "repo_url": "https://github.com/example/repo.git",
+        "requested_commit_hash": null
+      }
     ],
-    "clone_depth": 1,
     "tools": [
       "github",
       "sonar"
@@ -89,6 +95,7 @@ Example:
       "scope": "repository",
       "repo_url": "https://github.com/example/repo.git",
       "project_name": "example@repo",
+      "requested_commit_hash": null,
       "reason": "clone failed",
       "recorded_at_utc": "2026-03-22T15:00:01Z"
     }
@@ -99,6 +106,8 @@ Example:
       "repo_url": "https://github.com/example/repo.git",
       "project_name": "example@repo",
       "extractor": "github",
+      "requested_commit_hash": null,
+      "metric_binding": "observation-bound",
       "reason": "api failed",
       "recorded_at_utc": "2026-03-22T15:00:02Z"
     }
@@ -108,6 +117,7 @@ Example:
       "scope": "repository",
       "repo_url": "https://github.com/example/repo.git",
       "project_name": "example@repo",
+      "requested_commit_hash": null,
       "reason": "clone failed",
       "recorded_at_utc": "2026-03-22T15:00:01Z"
     },
@@ -116,11 +126,24 @@ Example:
       "repo_url": "https://github.com/example/repo.git",
       "project_name": "example@repo",
       "extractor": "github",
+      "requested_commit_hash": null,
+      "metric_binding": "observation-bound",
       "reason": "api failed",
       "recorded_at_utc": "2026-03-22T15:00:02Z"
     }
   ],
-  "skipped_runs": []
+  "skipped_runs": [
+    {
+      "scope": "extractor",
+      "repo_url": "https://github.com/example/repo.git",
+      "project_name": "example@repo",
+      "extractor": "ck",
+      "requested_commit_hash": null,
+      "metric_binding": "revision-bound",
+      "reason": "cached_result",
+      "recorded_at_utc": "2026-03-22T15:00:03Z"
+    }
+  ]
 }
 ```
 
@@ -142,6 +165,8 @@ Missing output files are meaningful:
 - missing `<tool>.parquet` and `<tool>.json` usually means the extractor failed or was not selected
 - missing only one of the pair means the result is incomplete and is not treated as cached
 - missing `results/runs/<run-id>/summary.json` usually means config loading failed before reporting started
+- results are stored per repository, not per repository revision; a later run for
+  the same repository can overwrite earlier artifacts
 
 ## Consumer guidance
 

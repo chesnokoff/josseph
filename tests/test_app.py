@@ -11,6 +11,7 @@ from josseph.utils import AnalysisError
 
 class SuccessfulExtractor:
     requires_checkout = False
+    metric_binding = "observation-bound"
 
     def __init__(self, rows):
         self._rows = rows
@@ -68,6 +69,12 @@ def test_pipeline_run_persists_results_and_summary_for_successful_run(tmp_path, 
     assert summary["exit_code"] == 0
     assert summary["summary"]["repository_count"] == 1
     assert summary["summary"]["failed_run_count"] == 0
+    assert summary["config"]["repositories"] == [
+        {
+            "repo_url": "https://github.com/example/repo.git",
+            "requested_commit_hash": None,
+        }
+    ]
 
     project_dir = results_dir / "example@repo"
     assert pd.read_parquet(project_dir / "github.parquet").to_dict(orient="records") == [
@@ -75,6 +82,8 @@ def test_pipeline_run_persists_results_and_summary_for_successful_run(tmp_path, 
     ]
     metadata = json.loads((project_dir / "github.json").read_text(encoding="utf-8"))
     assert metadata["commit_hash"] == ""
+    assert metadata["requested_commit_hash"] is None
+    assert metadata["metric_binding"] == "observation-bound"
     assert metadata["collected_at_utc"].endswith("Z")
 
 

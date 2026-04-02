@@ -33,6 +33,8 @@ def test_result_writer_persists_parquet_and_metadata(tmp_path):
         "github",
         [{"stars": 42, "language": "Java"}],
         commit_hash="abc123",
+        requested_commit_hash=None,
+        metric_binding="observation-bound",
         collected_at=collected_at,
     )
 
@@ -46,5 +48,38 @@ def test_result_writer_persists_parquet_and_metadata(tmp_path):
     ]
     assert json.loads(metadata_path.read_text(encoding="utf-8")) == {
         "commit_hash": "abc123",
+        "requested_commit_hash": None,
+        "metric_binding": "observation-bound",
         "collected_at_utc": "2026-03-22T12:34:56Z",
     }
+
+
+def test_result_directory_manager_requires_matching_commit_for_revision_bound_cache(tmp_path):
+    manager = ResultDirectoryManager(tmp_path)
+    project_dir = manager.prepare("example@repo")
+    (project_dir / "ck.parquet").write_text("placeholder", encoding="utf-8")
+    (project_dir / "ck.json").write_text(
+        json.dumps(
+            {
+                "commit_hash": "deadbeefcafebabe",
+                "requested_commit_hash": "deadbeef",
+                "metric_binding": "revision-bound",
+                "collected_at_utc": "2026-03-22T12:34:56Z",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert manager.has_result(
+        "example@repo",
+        "ck",
+        requested_commit_hash="deadbeef",
+        metric_binding="revision-bound",
+    ) is True
+    assert manager.has_result(
+        "example@repo",
+        "ck",
+        requested_commit_hash="facefeed",
+        metric_binding="revision-bound",
+    ) is False

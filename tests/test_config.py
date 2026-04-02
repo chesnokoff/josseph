@@ -5,6 +5,7 @@ import random
 
 import pytest
 
+from josseph.domain.repository import RepositorySpec
 from josseph.pipeline.config import build_config
 
 
@@ -33,7 +34,6 @@ def test_build_config_reads_yaml_and_resolves_repositories(tmp_path, monkeypatch
                 "extractor_settings:",
                 "  github:",
                 "    token: test-token",
-                "clone_depth: 5",
                 "workers: '3'",
                 "repositories: repos.txt",
             ]
@@ -47,14 +47,68 @@ def test_build_config_reads_yaml_and_resolves_repositories(tmp_path, monkeypatch
 
     assert config.config_path == config_file.resolve()
     assert config.repositories == [
-        "https://github.com/example/alpha.git",
-        "https://github.com/example/beta.git",
+        RepositorySpec.from_url("https://github.com/example/alpha.git"),
+        RepositorySpec.from_url("https://github.com/example/beta.git"),
     ]
     assert config.tools == ["github", "ck"]
     assert config.extractor_settings == {"github": {"token": "test-token"}}
-    assert config.clone_depth == 5
     assert config.workers == 3
     assert config.github_token is None
+
+
+def test_build_config_reads_yaml_repository_specs_with_optional_commit(tmp_path, monkeypatch):
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text(
+        "\n".join(
+            [
+                "- url: https://github.com/example/alpha.git",
+                "  commit: deadbeefcafebabe",
+                "- https://github.com/example/beta.git",
+                "- https://github.com/example/gamma.git:",
+                "    commit: facefeed1234",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(f"repositories: {repos_file.name}\n", encoding="utf-8")
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    config = build_config(Namespace(config_path=str(config_file)))
+
+    assert config.repositories == [
+        RepositorySpec.from_url(
+            "https://github.com/example/alpha.git",
+            requested_commit_hash="deadbeefcafebabe",
+        ),
+        RepositorySpec.from_url("https://github.com/example/beta.git"),
+        RepositorySpec.from_url(
+            "https://github.com/example/gamma.git",
+            requested_commit_hash="facefeed1234",
+        ),
+    ]
+
+
+def test_build_config_rejects_conflicting_requested_commits_for_same_repository(tmp_path):
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text(
+        "\n".join(
+            [
+                "- url: https://github.com/example/repo.git",
+                "  commit: deadbeef",
+                "- url: https://github.com/example/repo.git",
+                "  commit: facefeed",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(f"repositories: {repos_file.name}\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="different requested commits"):
+        build_config(Namespace(config_path=str(config_file)))
 
 
 def test_build_config_uses_environment_github_token(tmp_path, monkeypatch):
@@ -88,7 +142,7 @@ def test_build_config_rejects_invalid_workers(tmp_path):
         build_config(Namespace(config_path=str(config_file)))
 
 
-def test_build_config_rejects_invalid_clone_depth(tmp_path):
+def test_build_config_rejects_clone_depth(tmp_path):
     repos_file = tmp_path / "repos.txt"
     repos_file.write_text("https://github.com/example/repo.git\n", encoding="utf-8")
     config_file = tmp_path / "config.yaml"
@@ -103,7 +157,7 @@ def test_build_config_rejects_invalid_clone_depth(tmp_path):
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="'clone_depth' must be a positive integer"):
+    with pytest.raises(ValueError, match="'clone_depth' is no longer supported"):
         build_config(Namespace(config_path=str(config_file)))
 
 

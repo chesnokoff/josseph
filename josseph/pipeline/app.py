@@ -71,7 +71,6 @@ class RepositoryAnalysisPipeline:
             failures = AnalysisRunner().run(
                 repos,
                 analyzer,
-                config.clone_depth,
                 config.workers,
                 run_reporter=run_reporter,
             )

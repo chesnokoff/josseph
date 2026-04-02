@@ -5,12 +5,12 @@ import logging
 import subprocess
 from pathlib import Path
 
-from josseph.domain.repository import AnalysisTarget, RepositoryRef
+from josseph.domain.repository import AnalysisTarget, RepositorySpec
 from josseph.metrics.abstract_extractor import MetricExtractor
 from josseph.pipeline.cloner import RepositoryCloner, cloned_repository
-from josseph.process import CommandExecutionError, CommandRunner
 from josseph.pipeline.run_report import RunReportCollector
 from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
+from josseph.process import CommandExecutionError, CommandRunner
 from josseph.utils import AnalysisError
 
 
@@ -43,8 +43,12 @@ class RepositoryAnalyzer:
             "Initializing repository analysis pipeline: %s", extractors.keys()
         )
 
-    def analyze(self, repo_url: str, clone_depth: int | None) -> None:
-        target = AnalysisTarget(repository=RepositoryRef.parse(repo_url))
+    def analyze(self, repository: str | RepositorySpec) -> None:
+        repository = RepositorySpec.coerce(repository)
+        target = AnalysisTarget(
+            repository=repository.repository,
+            requested_commit_hash=repository.requested_commit_hash,
+        )
         result_dir = self._result_manager.prepare(target.project_name)
         pending_extractors = self._get_pending_extractors(target)
         if not pending_extractors:
@@ -74,7 +78,7 @@ class RepositoryAnalyzer:
 
         self.log.info("Starting analysis of %s", target.project_name)
         try:
-            self._run_checkout_extractors(checkout_required, target, result_dir, clone_depth)
+            self._run_checkout_extractors(checkout_required, target, result_dir)
         except RepositoryAnalysisError:
             raise
         except Exception as exc:
@@ -87,7 +91,13 @@ class RepositoryAnalyzer:
         pending: dict[str, MetricExtractor] = {}
         project_name = target.project_name
         for extractor_name, extractor in self._extractors.items():
-            if not self._force and self._result_manager.has_result(project_name, extractor_name):
+            metric_binding = self._extractor_metric_binding(extractor)
+            if not self._force and self._result_manager.has_result(
+                project_name,
+                extractor_name,
+                requested_commit_hash=target.requested_commit_hash,
+                metric_binding=metric_binding,
+            ):
                 self.log.info(
                     "Metrics already present for %s with %s extractor. Skipping.",
                     project_name,
@@ -98,6 +108,8 @@ class RepositoryAnalyzer:
                         repo_url=target.repository.raw,
                         project_name=project_name,
                         extractor_name=extractor_name,
+                        requested_commit_hash=target.requested_commit_hash,
+                        metric_binding=metric_binding,
                         reason="cached_result",
                     )
                 continue
@@ -122,13 +134,14 @@ class RepositoryAnalyzer:
         extractors: dict[str, MetricExtractor],
         target: AnalysisTarget,
         result_dir: Path,
-        clone_depth: int | None,
     ) -> None:
         try:
             with cloned_repository(
                 self._cloner,
-                target.repository.raw,
-                clone_depth,
+                RepositorySpec(
+                    repository=target.repository,
+                    requested_commit_hash=target.requested_commit_hash,
+                ),
             ) as project_dir:
                 commit_hash = self._resolve_commit_hash(project_dir, target)
                 checkout_target = target.with_checkout(
@@ -173,6 +186,7 @@ class RepositoryAnalyzer:
         failure_template: str,
     ) -> None:
         for extractor_name, extractor in extractors.items():
+            metric_binding = self._extractor_metric_binding(extractor)
             try:
                 rows = extractor.run(target)
             except (
@@ -193,6 +207,8 @@ class RepositoryAnalyzer:
                         repo_url=target.repository.raw,
                         project_name=target.project_name,
                         extractor_name=extractor_name,
+                        requested_commit_hash=target.requested_commit_hash,
+                        metric_binding=metric_binding,
                         reason=failure_reason,
                     )
                 continue
@@ -200,7 +216,9 @@ class RepositoryAnalyzer:
                 result_dir,
                 extractor_name,
                 rows,
-                commit_hash=target.commit_hash or "",
+                commit_hash=self._result_commit_hash(target, metric_binding),
+                requested_commit_hash=target.requested_commit_hash,
+                metric_binding=metric_binding,
             )
 
     @staticmethod
@@ -208,3 +226,18 @@ class RepositoryAnalyzer:
         if isinstance(exc, CommandExecutionError):
             return str(exc)
         return f"{exc.__class__.__name__}: {exc}"
+
+    @staticmethod
+    def _extractor_metric_binding(extractor: MetricExtractor) -> str:
+        binding = getattr(extractor, "metric_binding", "revision-bound")
+        if isinstance(binding, str) and binding in {"revision-bound", "observation-bound"}:
+            return binding
+        return "revision-bound"
+
+    @staticmethod
+    def _result_commit_hash(target: AnalysisTarget, metric_binding: str) -> str:
+        if target.commit_hash is not None:
+            return target.commit_hash
+        if metric_binding == "revision-bound" and target.requested_commit_hash is not None:
+            return target.requested_commit_hash
+        return ""

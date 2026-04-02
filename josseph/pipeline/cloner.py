@@ -8,7 +8,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
-from josseph.domain.repository import RepositoryRef
+from josseph.domain.repository import RepositorySpec
 from josseph.process import CommandRunner
 from josseph.utils import setup_trace
 
@@ -22,8 +22,10 @@ class RepositoryCloner:
         self._projects_dir = projects_dir
         self._command_runner = command_runner
 
-    def clone(self, repo_url: str, clone_depth: int | None) -> Path:
-        project_name = RepositoryRef.parse(repo_url).project_name
+    def clone(self, repository: str | RepositorySpec) -> Path:
+        repository = RepositorySpec.coerce(repository)
+        repo_url = repository.repo_url
+        project_name = repository.project_name
         target = self._projects_dir / project_name
         target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -43,11 +45,10 @@ class RepositoryCloner:
                 attempt,
                 max_attempts,
             )
-            cmd = ["git", "clone", "--single-branch", "--no-tags", repo_url, str(staging_dir)]
-            if clone_depth:
-                cmd[2:2] = ["--depth", str(clone_depth)]
+            cmd = self._build_clone_command(repo_url, staging_dir)
             try:
                 self.log.trace(self._command_runner.run(cmd))
+                self._checkout_requested_commit(staging_dir, repository)
                 self._remove_path(target)
                 staging_dir.replace(target)
                 self.log.info("Finished cloning %s", repo_url)
@@ -78,6 +79,29 @@ class RepositoryCloner:
         assert last_exc is not None
         raise last_exc
 
+    def _build_clone_command(
+        self,
+        repo_url: str,
+        staging_dir: Path,
+    ) -> list[str]:
+        return ["git", "clone", "--single-branch", "--no-tags", repo_url, str(staging_dir)]
+
+    def _checkout_requested_commit(self, repo_path: Path, repository: RepositorySpec) -> None:
+        requested_commit_hash = repository.requested_commit_hash
+        if requested_commit_hash is None:
+            return
+        self.log.info(
+            "Checking out requested commit %s for %s",
+            requested_commit_hash,
+            repository.project_name,
+        )
+        self.log.trace(
+            self._command_runner.run(
+                ["git", "checkout", "--detach", requested_commit_hash],
+                cwd=repo_path,
+            )
+        )
+
     def cleanup(self, repo_path: Path) -> None:
         self._remove_path(repo_path)
 
@@ -97,12 +121,13 @@ class RepositoryCloner:
     def _annotate_clone_failure(
         self,
         exc: Exception,
-        repo_url: str,
+        repository: str | RepositorySpec,
         target: Path,
         max_attempts: int,
     ) -> None:
+        repository = RepositorySpec.coerce(repository)
         note = (
-            f"Failed to clone {repo_url} into {target} after {max_attempts} attempts."
+            f"Failed to clone {repository.repo_url} into {target} after {max_attempts} attempts."
         )
         add_note = getattr(exc, "add_note", None)
         if callable(add_note):
@@ -110,8 +135,11 @@ class RepositoryCloner:
 
 
 @contextmanager
-def cloned_repository(cloner: RepositoryCloner, repo_url: str, clone_depth: int | None):
-    repo_path = cloner.clone(repo_url, clone_depth)
+def cloned_repository(
+    cloner: RepositoryCloner,
+    repository: str | RepositorySpec,
+):
+    repo_path = cloner.clone(repository)
     try:
         yield repo_path
     finally:

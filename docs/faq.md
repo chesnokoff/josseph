@@ -6,18 +6,19 @@ For normal use, yes. JOSSeph is Docker-first, and the documented execution path
 is:
 
 ```bash
-docker compose run --rm josseph configs/run.yaml
+docker compose run --rm josseph configs/config.yaml
 ```
 
 Direct module execution exists for development and debugging:
 
 ```bash
-python -m josseph configs/run.yaml
+python -m josseph configs/config.yaml
 ```
 
 ## What exactly goes into `repositories`?
 
-A text file with one repository URL per line.
+A text file with one repository URL per line, or a YAML sequence when you need
+to pin a commit.
 
 ```text
 https://github.com/example/project.git
@@ -25,6 +26,13 @@ https://github.com/example/project.git
 
 Blank lines and `#` comments are ignored. Duplicate URLs are removed after
 loading.
+
+YAML input is also supported for pinned commits, but only for revisions that
+are reachable from the repository's default branch.
+
+You cannot list the same repository twice in one run with different pinned
+commits. The config validator rejects that because outputs are stored per
+repository, not per revision.
 
 ## Why is a result missing for one tool?
 
@@ -54,10 +62,13 @@ created. Typical examples are missing config file, invalid YAML, or missing
 Yes.
 
 ```yaml
-repositories: configs/repos.txt
+repositories: repositories/one-repo.txt
 tools:
   - github
 ```
+
+If you save that config under `configs/`, the repository path resolves to
+`configs/repositories/one-repo.txt`.
 
 ## What should I verify after a run?
 
@@ -71,16 +82,20 @@ JOSSeph reuses a cached result whenever **both** `<tool>.parquet` and
 `<tool>.json` exist for a given repository and tool. There is no content
 fingerprint — the cache check is presence-only.
 
+`observation-bound` extractors follow the same cache rule.
+
 This means stale results can accumulate if you:
 
-- change your config (e.g. switch `clone_depth`, add tools)
+- change your config (e.g. change requested commits, add tools)
 - update a tool version (CK, CM, SonarQube, Sonar Scanner)
 - repoint a repository list to different repos with the same project name
+- pin a different commit for the same repository, because artifacts are stored
+  per repository directory rather than per revision
 
 **To force a full re-run, use `--force`:**
 
 ```bash
-docker compose run --rm josseph /app/configs/config.yaml --force
+docker compose run --rm josseph configs/config.yaml --force
 ```
 
 `--force` bypasses the cache check and re-runs all extractors for all

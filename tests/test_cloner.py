@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from josseph.domain.repository import RepositorySpec
 from josseph.pipeline.cloner import RepositoryCloner
 
 
@@ -66,7 +67,7 @@ def test_repository_cloner_retries_and_cleans_failed_staging_dirs(tmp_path, monk
         return "cloned"
 
     cloner = RepositoryCloner(projects_dir, FakeCommandRunner(fake_run_command))
-    target = cloner.clone("https://github.com/example/repo.git", clone_depth=2)
+    target = cloner.clone("https://github.com/example/repo.git")
 
     assert target == projects_dir / "example@repo"
     assert len(attempts) == 3
@@ -88,7 +89,7 @@ def test_repository_cloner_replaces_existing_checkout(tmp_path, monkeypatch):
         return "cloned"
 
     cloner = RepositoryCloner(projects_dir, FakeCommandRunner(fake_run_command))
-    cloned = cloner.clone("https://github.com/example/repo.git", clone_depth=None)
+    cloned = cloner.clone("https://github.com/example/repo.git")
 
     assert cloned == target
     assert (cloned / "fresh.txt").read_text(encoding="utf-8") == "fresh"
@@ -107,9 +108,55 @@ def test_repository_cloner_annotates_final_failure(tmp_path, monkeypatch):
     cloner = RepositoryCloner(projects_dir, FakeCommandRunner(fake_run_command))
 
     with pytest.raises(RuntimeError) as excinfo:
-        cloner.clone("https://github.com/example/repo.git", clone_depth=None)
+        cloner.clone("https://github.com/example/repo.git")
 
     assert excinfo.value.__notes__ == [
         "Failed to clone https://github.com/example/repo.git into "
         f"{projects_dir / 'example@repo'} after 3 attempts."
     ]
+
+
+def test_repository_cloner_checks_out_requested_commit_after_clone(tmp_path, monkeypatch):
+    projects_dir = tmp_path / "projects"
+    runner = FakeCommandRunner(lambda *args, **kwargs: "")
+
+    monkeypatch.setattr("josseph.pipeline.cloner.time.sleep", lambda seconds: None)
+
+    cloner = RepositoryCloner(projects_dir, runner)
+    target = cloner.clone(
+        RepositorySpec.from_url(
+            "https://github.com/example/repo.git",
+            requested_commit_hash="deadbeef",
+        ),
+    )
+
+    assert target == projects_dir / "example@repo"
+    assert runner.calls[0]["cmd"][:4] == [
+        "git",
+        "clone",
+        "--single-branch",
+        "--no-tags",
+    ]
+    assert runner.calls[0]["cmd"][4] == "https://github.com/example/repo.git"
+    staging_dir = Path(runner.calls[0]["cmd"][-1])
+    assert staging_dir.parent == projects_dir
+    assert staging_dir.name.startswith(".example@repo.clone-")
+    assert runner.calls[1]["cmd"] == ["git", "checkout", "--detach", "deadbeef"]
+    assert runner.calls[1]["cwd"] == staging_dir
+
+
+def test_repository_cloner_uses_single_branch_clone_without_shallow_depth(tmp_path, monkeypatch):
+    projects_dir = tmp_path / "projects"
+    runner = FakeCommandRunner(lambda *args, **kwargs: "")
+
+    monkeypatch.setattr("josseph.pipeline.cloner.time.sleep", lambda seconds: None)
+
+    RepositoryCloner(projects_dir, runner).clone("https://github.com/example/repo.git")
+
+    assert runner.calls[0]["cmd"][:4] == [
+        "git",
+        "clone",
+        "--single-branch",
+        "--no-tags",
+    ]
+    assert "--depth" not in runner.calls[0]["cmd"]

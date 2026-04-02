@@ -19,6 +19,7 @@ services:
     volumes:
       - ./configs:/app/configs:ro
       - ./data:/app/data:ro
+      - ./workspace:/app/workspace
       - ./results:/app/results
     env_file:
       - path: .env

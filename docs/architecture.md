@@ -37,7 +37,7 @@ __main__.py          parse args → RepositoryAnalysisPipeline.run(args)
         │
         ▼
 config.py            load YAML → AnalysisConfig
-                     resolve repositories file → list[str]
+                     resolve repositories file → list[RepositorySpec]
         │
         ▼
 registry.py          auto-discover extractor modules via pkgutil.iter_modules
@@ -45,7 +45,7 @@ registry.py          auto-discover extractor modules via pkgutil.iter_modules
         │
         ▼
 runner.py            ThreadPoolExecutor(workers)
-   for each repo ──► analyzer.py  RepositoryAnalyzer.analyze(repo_url, clone_depth)
+   for each repo ──► analyzer.py  RepositoryAnalyzer.analyze(repo_spec)
         │
         ├── checkout-free extractors (github) ──► extractor.run(target)
         │
@@ -79,6 +79,9 @@ A cached result is valid only when **both** files are present:
 If only one exists, the extractor reruns. This prevents partial writes from
 being silently treated as complete.
 
+`observation-bound` extractors use the same cache contract; the distinction is
+documented for reproducibility, not for automatic cache invalidation.
+
 ### Extractor isolation
 
 Each extractor is a self-contained module under `josseph/metrics/extractors/`.
@@ -96,6 +99,10 @@ to swap out subprocess execution for other backends.
 Extractors declare `requires_checkout: bool`. The analyzer splits them into two
 groups and runs the checkout-free group before cloning. This avoids a full git
 clone when only API-based extractors are needed.
+
+Pinned repository commits are only supported when reachable from the
+repository's default branch. The clone step still checks out the requested
+commit after cloning.
 
 ## Adding a new extractor
 
@@ -117,5 +124,5 @@ No registration step is required.
 - Single host: SonarQube runs on the same Docker network as the pipeline.
   There is no multi-host or cloud SonarQube support.
 - Cache staleness: cached results are reused based on file presence, not
-  content fingerprint. If you change configs or tool versions, clear `results/`
-  or use `--force`.
+  content fingerprint. If you change configs, tool versions, or pinned commits,
+  clear `results/` or use `--force`.

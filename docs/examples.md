@@ -4,10 +4,10 @@ These examples show real artifact shapes and failure handling.
 
 ## Example 1: Metadata-only run
 
-Config:
+Config excerpt, save under `configs/`:
 
 ```yaml
-repositories: configs/repos.txt
+repositories: repositories/one-repo.txt
 tools:
   - github
 workers: 2
@@ -17,7 +17,7 @@ github_token: ghp_example
 Run:
 
 ```bash
-docker compose run --rm josseph configs/run.yaml
+docker compose run --rm josseph configs/config.yaml
 ```
 
 Expected repository artifact set:
@@ -33,6 +33,8 @@ Example `github.json`:
 ```json
 {
   "commit_hash": "",
+  "requested_commit_hash": null,
+  "metric_binding": "observation-bound",
   "collected_at_utc": "2026-03-22T12:34:56Z"
 }
 ```
@@ -67,17 +69,74 @@ Example row inside `github.parquet`:
 }
 ```
 
-## Example 2: Mixed checkout-free and checkout-based extractors
+## Example 2: Pinned commit run
 
-Config:
+Hypothetical pinned-config excerpt (save under `configs/`):
 
 ```yaml
-repositories: configs/repos.txt
+repositories: repositories/pinned-projects.yaml  # hypothetical
+tools:
+  - github
+  - ck
+workers: 1
+```
+
+Hypothetical repository list excerpt:
+
+```yaml
+- url: https://github.com/example/project.git
+  commit: deadbeefcafebabe
+```
+
+Relevant per-tool metadata:
+
+```json
+{
+  "github.json": {
+    "commit_hash": "",
+    "requested_commit_hash": "deadbeefcafebabe",
+    "metric_binding": "observation-bound",
+    "collected_at_utc": "2026-03-22T12:34:56Z"
+  },
+  "ck.json": {
+    "commit_hash": "deadbeefcafebabe",
+    "requested_commit_hash": "deadbeefcafebabe",
+    "metric_binding": "revision-bound",
+    "collected_at_utc": "2026-03-22T12:35:10Z"
+  }
+}
+```
+
+Relevant `summary.json` fragment:
+
+```json
+{
+  "config": {
+    "repositories": [
+      {
+        "repo_url": "https://github.com/example/project.git",
+        "requested_commit_hash": "deadbeefcafebabe"
+      }
+    ]
+  },
+  "summary": {
+    "repository_count": 1,
+    "failed_run_count": 0,
+    "skipped_run_count": 0
+  }
+}
+```
+
+## Example 3: Mixed checkout-free and checkout-based extractors
+
+Config excerpt, matching `configs/20-small.yaml`:
+
+```yaml
+repositories: repositories/20-small-repos.txt
 tools:
   - github
   - ck
   - cm
-clone_depth: 1
 workers: 2
 extractor_settings:
   cm:
@@ -93,11 +152,13 @@ Execution model for each repository:
 5. Run `cm`.
 6. Persist `<tool>.parquet` and `<tool>.json` for each successful extractor.
 
-## Example 3: Partial extractor failure with successful run
+## Example 4: Partial extractor failure with successful run
 
 Suppose `github` succeeds and `sonar` fails because SonarQube is unavailable.
 
 Example `summary.json`:
+
+Excerpt, omitting unchanged fields:
 
 ```json
 {
@@ -121,6 +182,8 @@ Example `summary.json`:
       "repo_url": "https://github.com/example/repo.git",
       "project_name": "example@repo",
       "extractor": "sonar",
+      "requested_commit_hash": null,
+      "metric_binding": "revision-bound",
       "reason": "AnalysisError: scanner unavailable",
       "recorded_at_utc": "2026-03-22T15:00:04Z"
     }
@@ -131,6 +194,8 @@ Example `summary.json`:
       "repo_url": "https://github.com/example/repo.git",
       "project_name": "example@repo",
       "extractor": "sonar",
+      "requested_commit_hash": null,
+      "metric_binding": "revision-bound",
       "reason": "AnalysisError: scanner unavailable",
       "recorded_at_utc": "2026-03-22T15:00:04Z"
     }
@@ -144,13 +209,17 @@ Operational meaning:
 - at least one extractor failed
 - successful artifacts from other extractors remain valid
 - downstream consumers must consult `summary.json` before assuming completeness
+- the artifacts are stored under one repository directory, so a later run for
+  the same repository can overwrite an earlier revision's outputs
 
-## Example 4: Repository failure with non-zero exit
+## Example 5: Repository failure with non-zero exit
 
 If clone or checkout resolution fails for a repository, the run ends with exit
 code `1`.
 
 Example excerpt:
+
+Excerpt, omitting unchanged fields:
 
 ```json
 {
@@ -160,8 +229,8 @@ Example excerpt:
     "repository_count": 1,
     "affected_repository_count": 1,
     "repository_failure_count": 1,
-    "extractor_failure_count": 1,
-    "failed_run_count": 2,
+    "extractor_failure_count": 0,
+    "failed_run_count": 1,
     "skipped_run_count": 0
   },
   "repository_failures": [
@@ -169,6 +238,7 @@ Example excerpt:
       "scope": "repository",
       "repo_url": "https://github.com/example/repo.git",
       "project_name": "example@repo",
+      "requested_commit_hash": null,
       "reason": "clone failed",
       "recorded_at_utc": "2026-03-22T15:00:01Z"
     }

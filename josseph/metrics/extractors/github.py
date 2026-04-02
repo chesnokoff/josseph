@@ -13,6 +13,7 @@ class GithubExtractor(MetricExtractor):
     """Collect GitHub metadata without a local checkout."""
 
     requires_checkout = False
+    metric_binding = "observation-bound"
 
     def __init__(self, *, client: GithubClient) -> None:
         self.log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
