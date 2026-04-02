@@ -1,4 +1,9 @@
-"""Backward-compatible exports for pipeline orchestration."""
+"""Backward-compatible exports for pipeline orchestration.
+
+Deprecated: import directly from the pipeline submodules instead.
+This shim exists for external code written against earlier versions of the
+package and will be removed in a future release.
+"""
 from __future__ import annotations
 
 from josseph.pipeline.analyzer import RepositoryAnalyzer

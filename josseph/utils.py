@@ -1,4 +1,5 @@
 import logging
+import os
 import ssl
 import time
 import sys
@@ -16,8 +17,17 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIGS_DIR = ROOT / "configs"
 EXTERNAL_DATA_DIR = ROOT.parent / ".oss-metrics-data"
 RESULTS_DIR = ROOT / "results"
-PROJECTS_DIR = EXTERNAL_DATA_DIR / "workspace" / "projects"
 THIRD_PARTY_DIR = ROOT / "third_party"
+
+# The workspace directory where repositories are cloned.
+# Override with JOSSEPH_WORKSPACE env var to use a custom path
+# (e.g. inside a Docker volume mount or a CI workspace).
+_workspace_env = os.environ.get("JOSSEPH_WORKSPACE")
+PROJECTS_DIR = (
+    Path(_workspace_env) / "projects"
+    if _workspace_env
+    else EXTERNAL_DATA_DIR / "workspace" / "projects"
+)
 
 _LOGGING_CONFIGURED = False
 T = TypeVar("T")

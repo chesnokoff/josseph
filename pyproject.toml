@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "josseph"
+version = "1.0.0"
+description = "Docker-first reproducible pipeline for extracting metrics from GitHub Java repositories"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = [
+    "pandas==3.0.1",
+    "pyarrow==23.0.1",
+    "certifi==2026.1.4",
+    "numpy==2.4.2",
+    "PyYAML==6.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.0.2",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+josseph = "josseph.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["josseph*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["BLE001"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true

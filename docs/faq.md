@@ -64,3 +64,31 @@ tools:
 1. exit code
 2. `results/runs/<run-id>/summary.json`
 3. expected `<tool>.parquet` and `<tool>.json` pairs for each repository
+
+## How does caching work, and when should I clear results?
+
+JOSSeph reuses a cached result whenever **both** `<tool>.parquet` and
+`<tool>.json` exist for a given repository and tool. There is no content
+fingerprint — the cache check is presence-only.
+
+This means stale results can accumulate if you:
+
+- change your config (e.g. switch `clone_depth`, add tools)
+- update a tool version (CK, CM, SonarQube, Sonar Scanner)
+- repoint a repository list to different repos with the same project name
+
+**To force a full re-run, use `--force`:**
+
+```bash
+docker compose run --rm josseph /app/configs/config.yaml --force
+```
+
+`--force` bypasses the cache check and re-runs all extractors for all
+repositories, overwriting existing artifacts.
+
+Alternatively, delete `results/` manually before running.
+
+## Why is `nodejs` installed in the Docker image?
+
+SonarQube Scanner CLI requires Node.js at runtime for certain analysis
+operations. It is not used directly by the JOSSeph Python code.

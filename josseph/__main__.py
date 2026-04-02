@@ -16,6 +16,12 @@ def parse_args() -> argparse.Namespace:
         default=str(CONFIGS_DIR / "config.yaml"),
         help="Path to the YAML configuration file (default: %(default)s)",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="Ignore cached results and re-run all extractors.",
+    )
     return parser.parse_args()
 
 

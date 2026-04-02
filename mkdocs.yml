@@ -11,4 +11,6 @@ nav:
   - Config: config.md
   - Examples: examples.md
   - Output: output.md
+  - Metrics Reference: metrics.md
+  - Architecture: architecture.md
   - FAQ: faq.md

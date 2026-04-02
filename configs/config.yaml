@@ -6,4 +6,4 @@ tools:
   - sonar
 clone_depth: 1
 workers: 1
-repositories: ../../.oss-metrics-data/repos.txt
+repositories: repositories/one-repo.txt

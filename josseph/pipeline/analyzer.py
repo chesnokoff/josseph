@@ -27,6 +27,7 @@ class RepositoryAnalyzer:
         extractors: dict[str, MetricExtractor],
         command_runner: CommandRunner,
         run_reporter: RunReportCollector | None = None,
+        force: bool = False,
     ) -> None:
         self.log = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -37,6 +38,7 @@ class RepositoryAnalyzer:
         self._extractors = extractors
         self._command_runner = command_runner
         self._run_reporter = run_reporter
+        self._force = force
         self.log.debug(
             "Initializing repository analysis pipeline: %s", extractors.keys()
         )
@@ -85,7 +87,7 @@ class RepositoryAnalyzer:
         pending: dict[str, MetricExtractor] = {}
         project_name = target.project_name
         for extractor_name, extractor in self._extractors.items():
-            if self._result_manager.has_result(project_name, extractor_name):
+            if not self._force and self._result_manager.has_result(project_name, extractor_name):
                 self.log.info(
                     "Metrics already present for %s with %s extractor. Skipping.",
                     project_name,

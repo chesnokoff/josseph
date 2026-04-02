@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "JOSSeph: A Docker-first pipeline for extracting metrics from Java open-source repositories"
+version: 1.0.0
+date-released: "2026-04-02"
+license: MIT
+repository-code: "https://github.com/chesnokoff/oss-metrics"
+abstract: >
+  JOSSeph is a reproducible, Docker-first pipeline for extracting multi-dimensional
+  quality metrics from GitHub Java repositories. It integrates four metrics sources:
+  CK (static object-oriented metrics), CM (change/process metrics), the GitHub REST API
+  (project metadata), and SonarQube (maintainability and reliability measures). JOSSeph
+  is designed for empirical software engineering research that requires reproducible,
+  artifact-verified metric extraction at scale.
+keywords:
+  - empirical software engineering
+  - software metrics
+  - static analysis
+  - repository mining
+  - Java
+  - reproducibility
+authors:
+  - family-names: Chesnokoff
+    given-names: Aleksandr
+    orcid: ""

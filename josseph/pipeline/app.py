@@ -66,6 +66,7 @@ class RepositoryAnalysisPipeline:
                 extractors=extractors,
                 command_runner=command_runner,
                 run_reporter=run_reporter,
+                force=getattr(args, "force", False),
             )
             failures = AnalysisRunner().run(
                 repos,
