@@ -4,6 +4,7 @@ import logging
 import re
 import shlex
 import subprocess
+import threading
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -121,12 +122,28 @@ class SonarExtractor(MetricExtractor):
         ]
     )
 
-    def __init__(self, *, client: SonarClient, scanner: SonarScanner) -> None:
+    def __init__(
+        self,
+        *,
+        client: SonarClient,
+        scanner: SonarScanner,
+        concurrency_semaphore: threading.Semaphore | None = None,
+    ) -> None:
         self.log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self.client = client
         self._scanner = scanner
+        self._semaphore = concurrency_semaphore
 
     def run(self, target: AnalysisTarget) -> list[dict[str, str]]:
+        if self._semaphore is not None:
+            self._semaphore.acquire()
+        try:
+            return self._run_scan(target)
+        finally:
+            if self._semaphore is not None:
+                self._semaphore.release()
+
+    def _run_scan(self, target: AnalysisTarget) -> list[dict[str, str]]:
         repo_path = _require_checkout(target)
         sonar_project_key = _build_sonar_project_key(target)
         created_project = False
@@ -218,7 +235,21 @@ def build_extractor(
         command_runner=context.command_runner,
         settings=SonarScannerSettings.from_env(env),
     )
-    return SonarExtractor(client=sonar_client, scanner=sonar_scanner)
+    concurrency_limit = _parse_concurrency(env.get("SONAR_CONCURRENCY", "1"))
+    semaphore = threading.Semaphore(concurrency_limit)
+    return SonarExtractor(
+        client=sonar_client,
+        scanner=sonar_scanner,
+        concurrency_semaphore=semaphore,
+    )
+
+
+def _parse_concurrency(value: str) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return max(n, 1)
 
 
 def _build_sonar_environment(
@@ -235,6 +266,7 @@ def _build_sonar_environment(
         "exclusions": "SONAR_EXCLUSIONS",
         "include_frontend": "SONAR_INCLUDE_FRONTEND",
         "options": "SONAR_OPTIONS",
+        "concurrency": "SONAR_CONCURRENCY",
     }
     unknown = sorted(set(settings) - set(supported))
     if unknown:

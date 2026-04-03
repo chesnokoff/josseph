@@ -39,6 +39,11 @@ line-length = 100
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
 ignore = ["BLE001"]
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: end-to-end pipeline integration tests",
+]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true
