@@ -1,5 +1,9 @@
 # oss-metrics
 
+[![Tests](https://github.com/chesnokoff/oss-metrics/actions/workflows/test.yml/badge.svg)](https://github.com/chesnokoff/oss-metrics/actions/workflows/test.yml)
+[![Integration](https://github.com/chesnokoff/oss-metrics/actions/workflows/integration.yml/badge.svg)](https://github.com/chesnokoff/oss-metrics/actions/workflows/integration.yml)
+[![Docs](https://github.com/chesnokoff/oss-metrics/actions/workflows/deploy-docs.yml/badge.svg)](https://chesnokoff.github.io/oss-metrics/)
+
 Container-first pipeline for collecting repository metrics with:
 - CK (static code metrics)
 - CM (change metrics)
@@ -121,6 +125,18 @@ docker compose down
 - Cached results are reused only when both `<tool>.parquet` and `<tool>.json` are present.
 - `observation-bound` extractors are still cacheable by file presence; use
   `--force` to recollect them.
+
+## Third-Party Licenses
+
+JOSSeph vendors the following tools. All licenses are compatible with the
+project's MIT license.
+
+| Tool | Version | License | Source |
+|------|---------|---------|--------|
+| CK | 0.7.1 | Apache 2.0 | [github.com/mauricioaniche/ck](https://github.com/mauricioaniche/ck) |
+| CM | — | Apache 2.0 | [github.com/mauricioaniche/cm](https://github.com/mauricioaniche/cm) |
+| Sonar Scanner | 7.0.2.4839 | LGPL 3.0 | [github.com/SonarSource/sonar-scanner-cli](https://github.com/SonarSource/sonar-scanner-cli) |
+| SonarQube (Docker) | 25.5.0.107428-community | LGPL 3.0 | [github.com/SonarSource/sonarqube](https://github.com/SonarSource/sonarqube) |
 
 ## Extensibility API
 To add a new metrics source:

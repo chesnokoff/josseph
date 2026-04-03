@@ -3,15 +3,13 @@ import os
 import ssl
 import time
 import sys
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable
 from logging import config
 from pathlib import Path
 from typing import TypeVar
 from urllib.error import HTTPError, URLError
 
 import certifi
-
-from josseph.process import SubprocessCommandRunner
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIGS_DIR = ROOT / "configs"
@@ -95,15 +93,6 @@ def create_ssl_context() -> ssl.SSLContext:
         except Exception:  # pragma: no cover - best effort
             pass
     return context
-
-
-def run_command(
-    cmd: Iterable[str],
-    cwd: Path | None = None,
-    env: Mapping[str, str] | None = None,
-    timeout: int | float | None = None,
-) -> str:
-    return SubprocessCommandRunner().run(cmd, cwd=cwd, env=env, timeout=timeout)
 
 
 def retry_http_request(

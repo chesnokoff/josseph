@@ -155,30 +155,6 @@ def _parse_extractor_settings(value: object) -> dict[str, dict[str, object]]:
     return parsed
 
 
-def _parse_string_list(
-    value: object,
-    field_name: str,
-    *,
-    skip_comments: bool = False,
-) -> list[str]:
-    if isinstance(value, str):
-        items = [value]
-    elif isinstance(value, list):
-        items = value
-    else:
-        raise ValueError(f"'{field_name}' must be a string or a list of strings")
-
-    parsed: list[str] = []
-    for item in items:
-        string_value = _parse_optional_string(item, field_name)
-        if string_value is None:
-            continue
-        if skip_comments and string_value.startswith("#"):
-            continue
-        parsed.append(string_value)
-    return parsed
-
-
 def _parse_optional_string(value: object, field_name: str) -> str | None:
     if value is None:
         return None

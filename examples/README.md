@@ -60,8 +60,8 @@ gh = pd.read_parquet("results/GregorStocks@mage-bench/github.parquet")
 
 # Add repository-level context to all class rows
 gh_row = gh.iloc[0]
-ck["repo_stars"] = gh_row["stars"]
-ck["repo_forks"] = gh_row["forks"]
+ck["repo_stars"] = gh_row["stargazers_count"]
+ck["repo_forks"] = gh_row["forks_count"]
 
 print(ck[["file", "class", "wmc", "cbo", "repo_stars"]].head(10))
 ```
