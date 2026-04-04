@@ -1,0 +1,8 @@
+tools:
+  - ck
+  - cm
+  - github
+  - sonar
+
+workers: 4
+repositories: repositories/500-repos.txt
