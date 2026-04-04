@@ -4,27 +4,17 @@ This page gets you from an empty workspace to a run you can verify.
 
 ## 1. Create the repository list
 
-The repository file can be plain text or YAML. Plain text inputs read one URL
-per line, ignore blank lines, ignore lines starting with `#`, and remove
-duplicates after loading.
+The repository file is a YAML sequence. Each entry is either a plain URL string
+or a mapping with a `url` and an optional `commit` hash. Duplicates are removed
+after loading.
 
-```text
-# configs/repositories/one-repo.txt
-https://github.com/apache/airflow.git
-https://github.com/apache/spark.git
-https://github.com/apache/airflow.git
+```yaml
+# configs/repositories/one-repo.yaml
+- https://github.com/apache/airflow.git
+- https://github.com/apache/spark.git
 ```
 
-The effective repository set for this file is:
-
-```json
-[
-  "https://github.com/apache/airflow.git",
-  "https://github.com/apache/spark.git"
-]
-```
-
-Pinned commits use YAML:
+To pin a specific commit:
 
 ```yaml
 - url: https://github.com/apache/airflow.git
@@ -41,7 +31,7 @@ repository, not per revision.
 Use a small config first:
 
 ```yaml
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml
 tools:
   - github
   - ck
@@ -49,7 +39,7 @@ workers: 2
 ```
 
 Because this config lives under `configs/`, that repository path resolves to
-`configs/repositories/one-repo.txt`.
+`configs/repositories/one-repo.yaml`.
 
 Contract:
 

@@ -48,7 +48,7 @@ tools:
   - github
   - sonar
 workers: 1
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml
 ```
 
 4. Run the pipeline against that config:

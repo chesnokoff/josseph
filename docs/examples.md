@@ -7,7 +7,7 @@ These examples show real artifact shapes and failure handling.
 Config excerpt, save under `configs/`:
 
 ```yaml
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml
 tools:
   - github
 workers: 2
@@ -132,7 +132,7 @@ Relevant `summary.json` fragment:
 Config excerpt, matching `configs/20-small.yaml`:
 
 ```yaml
-repositories: repositories/20-small-repos.txt
+repositories: repositories/20-small-repos.yaml
 tools:
   - github
   - ck

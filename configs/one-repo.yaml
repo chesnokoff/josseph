@@ -1,4 +1,4 @@
 tools:
   - cm
 workers: 1
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml

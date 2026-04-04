@@ -34,14 +34,14 @@ class CheckoutExtractor:
 
 
 def _write_config(tmp_path) -> Namespace:
-    repos_file = tmp_path / "repos.txt"
-    repos_file.write_text(f"{REAL_REPOSITORY}\n", encoding="utf-8")
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text(f"- {REAL_REPOSITORY}\n", encoding="utf-8")
 
     config_file = tmp_path / "config.yaml"
     config_file.write_text(
         "\n".join(
             [
-                "repositories: repos.txt",
+                "repositories: repos.yaml",
                 "workers: 1",
                 "tools:",
                 "  - github",

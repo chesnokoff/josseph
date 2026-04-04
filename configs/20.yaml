@@ -4,4 +4,4 @@ tools:
   - github
   - sonar
 workers: 2
-repositories: repositories/20-repos.txt
+repositories: repositories/20-repos.yaml

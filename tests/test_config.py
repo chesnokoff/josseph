@@ -10,15 +10,13 @@ from josseph.pipeline.config import build_config
 
 
 def test_build_config_reads_yaml_and_resolves_repositories(tmp_path, monkeypatch):
-    repos_file = tmp_path / "repos.txt"
+    repos_file = tmp_path / "repos.yaml"
     repos_file.write_text(
         "\n".join(
             [
-                "https://github.com/example/alpha.git",
-                "",
-                "# comment",
-                "https://github.com/example/beta.git",
-                "https://github.com/example/alpha.git",
+                "- https://github.com/example/alpha.git",
+                "- https://github.com/example/beta.git",
+                "- https://github.com/example/alpha.git",
             ]
         )
         + "\n",
@@ -35,7 +33,7 @@ def test_build_config_reads_yaml_and_resolves_repositories(tmp_path, monkeypatch
                 "  github:",
                 "    token: test-token",
                 "workers: '3'",
-                "repositories: repos.txt",
+                "repositories: repos.yaml",
             ]
         )
         + "\n",
@@ -112,10 +110,10 @@ def test_build_config_rejects_conflicting_requested_commits_for_same_repository(
 
 
 def test_build_config_uses_environment_github_token(tmp_path, monkeypatch):
-    repos_file = tmp_path / "repos.txt"
-    repos_file.write_text("https://github.com/example/repo.git\n", encoding="utf-8")
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text("- https://github.com/example/repo.git\n", encoding="utf-8")
     config_file = tmp_path / "config.yaml"
-    config_file.write_text("repositories: repos.txt\n", encoding="utf-8")
+    config_file.write_text("repositories: repos.yaml\n", encoding="utf-8")
     monkeypatch.setenv("GITHUB_TOKEN", "env-token")
 
     config = build_config(Namespace(config_path=str(config_file)))
@@ -124,13 +122,13 @@ def test_build_config_uses_environment_github_token(tmp_path, monkeypatch):
 
 
 def test_build_config_rejects_invalid_workers(tmp_path):
-    repos_file = tmp_path / "repos.txt"
-    repos_file.write_text("https://github.com/example/repo.git\n", encoding="utf-8")
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text("- https://github.com/example/repo.git\n", encoding="utf-8")
     config_file = tmp_path / "config.yaml"
     config_file.write_text(
         "\n".join(
             [
-                "repositories: repos.txt",
+                "repositories: repos.yaml",
                 "workers: 0",
             ]
         )
@@ -143,13 +141,13 @@ def test_build_config_rejects_invalid_workers(tmp_path):
 
 
 def test_build_config_rejects_clone_depth(tmp_path):
-    repos_file = tmp_path / "repos.txt"
-    repos_file.write_text("https://github.com/example/repo.git\n", encoding="utf-8")
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text("- https://github.com/example/repo.git\n", encoding="utf-8")
     config_file = tmp_path / "config.yaml"
     config_file.write_text(
         "\n".join(
             [
-                "repositories: repos.txt",
+                "repositories: repos.yaml",
                 "clone_depth: 0",
             ]
         )
@@ -162,10 +160,10 @@ def test_build_config_rejects_clone_depth(tmp_path):
 
 
 def test_build_config_rejects_empty_repository_list(tmp_path):
-    repos_file = tmp_path / "repos.txt"
-    repos_file.write_text("# comment only\n\n", encoding="utf-8")
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text("[]\n", encoding="utf-8")
     config_file = tmp_path / "config.yaml"
-    config_file.write_text("repositories: repos.txt\n", encoding="utf-8")
+    config_file.write_text("repositories: repos.yaml\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="Repository list .* is empty"):
         build_config(Namespace(config_path=str(config_file)))
@@ -188,13 +186,13 @@ def test_build_config_requires_repositories_field(tmp_path):
 
 
 def test_build_config_rejects_non_mapping_extractor_settings(tmp_path):
-    repos_file = tmp_path / "repos.txt"
-    repos_file.write_text("https://github.com/example/repo.git\n", encoding="utf-8")
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text("- https://github.com/example/repo.git\n", encoding="utf-8")
     config_file = tmp_path / "config.yaml"
     config_file.write_text(
         "\n".join(
             [
-                "repositories: repos.txt",
+                "repositories: repos.yaml",
                 "extractor_settings:",
                 "  - invalid",
             ]
@@ -212,8 +210,8 @@ def test_build_config_deduplicates_tools_across_generated_inputs(tmp_path):
     available_tools = ["github", "ck", "cm", "sonar"]
 
     for index in range(20):
-        repos_file = tmp_path / f"repos-{index}.txt"
-        repos_file.write_text("https://github.com/example/repo.git\n", encoding="utf-8")
+        repos_file = tmp_path / f"repos-{index}.yaml"
+        repos_file.write_text("- https://github.com/example/repo.git\n", encoding="utf-8")
 
         raw_tools: list[str] = []
         for _ in range(rng.randint(1, 8)):

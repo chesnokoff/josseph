@@ -5,7 +5,7 @@ This page defines the run configuration contract.
 ## Minimal valid config
 
 ```yaml
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml
 tools:
   - github
   - ck
@@ -13,7 +13,7 @@ workers: 2
 ```
 
 If this file lives under `configs/`, that repository path resolves to
-`configs/repositories/one-repo.txt`.
+`configs/repositories/one-repo.yaml`.
 
 ## Field contract
 
@@ -30,25 +30,23 @@ If this file lives under `configs/`, that repository path resolves to
 - Paths in `repositories` are resolved relative to the YAML file.
 - `~` is expanded before resolution.
 - A repository file containing only comments and blank lines is invalid.
-- Repository files may be plain text or YAML.
-- YAML repository entries may include an optional `commit`.
+- Repository files must be YAML sequences.
+- Repository entries may include an optional `commit`.
 - Pinned commits are only supported when reachable from the repository's default branch.
 - `workers` defaults to `os.cpu_count()` when omitted.
 - non-empty `github_token` values are redacted to `***redacted***` in the run summary.
 
 ## Repository file example
 
-Input file:
+Input file (`configs/repositories/one-repo.yaml`):
 
-```text
-# configs/repositories/one-repo.txt
-https://github.com/example/alpha.git
-
-https://github.com/example/beta.git
-https://github.com/example/alpha.git
+```yaml
+- https://github.com/example/alpha.git
+- https://github.com/example/beta.git
+- https://github.com/example/alpha.git
 ```
 
-Effective repository list in the run summary:
+Effective repository list in the run summary (duplicates removed):
 
 ```json
 [
@@ -63,7 +61,7 @@ Effective repository list in the run summary:
 ]
 ```
 
-YAML repository file with pinned commits:
+With pinned commits:
 
 ```yaml
 - url: https://github.com/example/alpha.git
@@ -74,7 +72,7 @@ YAML repository file with pinned commits:
 ## Extractor settings example
 
 ```yaml
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml
 tools:
   - github
   - cm
@@ -108,14 +106,14 @@ repositories: [unterminated
 Invalid worker count:
 
 ```yaml
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml
 workers: 0
 ```
 
 Invalid extractor settings:
 
 ```yaml
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml
 extractor_settings:
   - invalid
 ```

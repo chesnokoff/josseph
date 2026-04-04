@@ -17,18 +17,15 @@ python -m josseph configs/config.yaml
 
 ## What exactly goes into `repositories`?
 
-A text file with one repository URL per line, or a YAML sequence when you need
-to pin a commit.
+A YAML sequence of repository URLs. Each entry is either a plain string or a
+mapping with a `url` and an optional pinned `commit`.
 
-```text
-https://github.com/example/project.git
+```yaml
+- https://github.com/example/project.git
 ```
 
-Blank lines and `#` comments are ignored. Duplicate URLs are removed after
-loading.
-
-YAML input is also supported for pinned commits, but only for revisions that
-are reachable from the repository's default branch.
+Duplicate URLs are removed after loading. Pinned commits are only supported
+when the commit is reachable from the repository's default branch.
 
 You cannot list the same repository twice in one run with different pinned
 commits. The config validator rejects that because outputs are stored per
@@ -62,13 +59,13 @@ created. Typical examples are missing config file, invalid YAML, or missing
 Yes.
 
 ```yaml
-repositories: repositories/one-repo.txt
+repositories: repositories/one-repo.yaml
 tools:
   - github
 ```
 
 If you save that config under `configs/`, the repository path resolves to
-`configs/repositories/one-repo.txt`.
+`configs/repositories/one-repo.yaml`.
 
 ## What should I verify after a run?
 

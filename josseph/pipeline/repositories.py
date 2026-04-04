@@ -14,25 +14,12 @@ def sanitize_repo_name(repo_url: str | RepositorySpec) -> str:
 
 
 def read_repositories(path: Path) -> list[RepositorySpec]:
-    """Load repository specs from a file."""
+    """Load repository specs from a YAML file."""
     if not path.exists():
         raise FileNotFoundError(f"Repository list {path} not found")
 
-    if path.suffix.lower() in {".yaml", ".yml"}:
-        repositories = _read_yaml_repositories(path)
-    else:
-        repositories = _read_text_repositories(path)
+    repositories = _read_yaml_repositories(path)
     return _deduplicate_repositories(repositories, path)
-
-
-def _read_text_repositories(path: Path) -> list[RepositorySpec]:
-    repositories: list[RepositorySpec] = []
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        repositories.append(RepositorySpec.from_url(line))
-    return repositories
 
 
 def _read_yaml_repositories(path: Path) -> list[RepositorySpec]:

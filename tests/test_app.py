@@ -31,9 +31,9 @@ class FailingExtractor:
 
 
 def write_config(tmp_path, *, tools: list[str] | None = None) -> Namespace:
-    repos_file = tmp_path / "repos.txt"
-    repos_file.write_text("https://github.com/example/repo.git\n", encoding="utf-8")
-    config_lines = ["repositories: repos.txt", "workers: 2"]
+    repos_file = tmp_path / "repos.yaml"
+    repos_file.write_text("- https://github.com/example/repo.git\n", encoding="utf-8")
+    config_lines = ["repositories: repos.yaml", "workers: 2"]
     if tools is not None:
         config_lines.append("tools:")
         config_lines.extend(f"  - {tool_name}" for tool_name in tools)
