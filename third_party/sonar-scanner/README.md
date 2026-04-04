@@ -1,10 +1,14 @@
-# Sonar Scanner (vendored tool)
+# Sonar Scanner
 
-Sonar Scanner is stored directly in this repository at a fixed version:
-- `7.0.2.4839`
+Sonar Scanner is downloaded automatically from the official SonarSource CDN
+during `docker build`. No manual setup is required.
 
-Docker build does **not** download Sonar Scanner from the network. It expects
-the scanner binary to exist under one of these paths:
+**Version:** `7.0.2.4839`
+**CDN base:** `https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/`
 
-- `sonar-scanner-7.0.2.4839-linux-x64/bin/sonar-scanner`
-- `sonar-scanner-7.0.2.4839-linux-aarch64/bin/sonar-scanner`
+The correct architecture variant (`linux-x64` or `linux-aarch64`) is selected
+at build time via `dpkg --print-architecture`. The `ARG SONAR_SCANNER_VERSION`
+in the `Dockerfile` controls the pinned version.
+
+Local extracted directories (`sonar-scanner-*-linux-*/`) are excluded from
+version control via `.gitignore`.

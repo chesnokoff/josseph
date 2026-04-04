@@ -8,7 +8,7 @@ logs/
 metrics.csv
 metric_dependencies.csv
 plots/
-/sonar-scanner/
+third_party/sonar-scanner/sonar-scanner-*/
 
 # Python cache
 __pycache__/
