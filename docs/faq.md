@@ -100,6 +100,27 @@ repositories, overwriting existing artifacts.
 
 Alternatively, delete `results/` manually before running.
 
+## SonarQube fails to start on Linux
+
+SonarQube uses Elasticsearch internally, which requires the kernel parameter
+`vm.max_map_count` to be at least `262144`. The default on most Linux
+distributions is `65530`, which causes SonarQube to crash on startup.
+
+Run this before starting the pipeline:
+
+```bash
+sudo sysctl -w vm.max_map_count=524288
+```
+
+To make it persistent, add to `/etc/sysctl.conf`:
+
+```
+vm.max_map_count=524288
+```
+
+This is **not needed** on macOS or Windows — Docker Desktop sets this
+automatically in its Linux VM.
+
 ## Why is `nodejs` installed in the Docker image?
 
 SonarQube Scanner CLI requires Node.js at runtime for certain analysis

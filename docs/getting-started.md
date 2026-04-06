@@ -51,7 +51,16 @@ Contract:
 
 ## 3. Run the pipeline
 
-JOSSeph is Docker-first. The standard way to run it is:
+JOSSeph is Docker-first. On **Linux**, SonarQube requires a kernel parameter
+increase before the first run:
+
+```bash
+sudo sysctl -w vm.max_map_count=524288
+```
+
+This is not needed on macOS or Windows (Docker Desktop handles it).
+
+Then run the pipeline:
 
 ```bash
 docker compose run --rm josseph configs/config.yaml

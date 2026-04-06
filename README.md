@@ -26,6 +26,14 @@ Container-first pipeline for collecting repository metrics with:
 export GITHUB_TOKEN=your_token_here
 ```
 
+- **Linux only:** SonarQube requires a kernel parameter increase for Elasticsearch:
+
+```bash
+sudo sysctl -w vm.max_map_count=524288
+```
+
+To make it persistent across reboots, add `vm.max_map_count=524288` to `/etc/sysctl.conf`. This is not required on macOS or Windows (Docker Desktop handles it automatically).
+
 ## Quick Start
 1. Build the app image:
 
