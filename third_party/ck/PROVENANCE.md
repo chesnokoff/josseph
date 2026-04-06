@@ -2,7 +2,7 @@
 
 - **Source:** https://github.com/mauricioaniche/ck
 - **License:** Apache 2.0
-- **JAR built from:** latest `master` branch (retrieved March 2026)
+- **JAR built from:** commit `295acc7a4b62ad8974c0f4f933e62f37fdddb079` (`master`)
 - **SHA-256:** `55086dfa7851b11cec59138e5340509c8350c8cf4e2fc06f379c1f8645c6e4e5`
 - **Build command:** `mvn clean compile package` → `ck-x.x.x-SNAPSHOT-jar-with-dependencies.jar`
 
