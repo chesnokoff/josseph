@@ -228,7 +228,7 @@ def build_extractor(
     sonar_client = SonarClient(
         host_url=env.get("SONAR_HOST_URL", f"http://localhost:{env.get('SONAR_INSTANCE_PORT', '9234')}"),
         admin_user=env.get("SONAR_ADMIN_USER", "admin"),
-        admin_password=env.get("SONAR_ADMIN_PASSWORD", "Son@rless123"),
+        admin_password=env.get("SONAR_ADMIN_PASSWORD", "admin"),
         admin_default_password=env.get("SONAR_ADMIN_DEFAULT_PASSWORD", "admin"),
     )
     sonar_scanner = SonarScanner(

@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11.12-slim
 
 ARG SONAR_SCANNER_VERSION=7.0.2.4839
 
