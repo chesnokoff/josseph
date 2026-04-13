@@ -1,6 +1,13 @@
 # Secrets — never commit
 .env
 
+# Local tooling
+.idea/
+.claude/
+.venv/
+.pytest_cache/
+josseph.egg-info/
+
 # Pipeline outputs
 results/
 workspace/
@@ -8,7 +15,17 @@ logs/
 metrics.csv
 metric_dependencies.csv
 plots/
+out/
+data/
+examples/sample-run/
+remote-results-current/
+remote-export-final/
+remote-export-with-log/
+zenodo-upload-*/
 third_party/sonar-scanner/sonar-scanner-*/
+
+# Publication artifacts
+SoftwareX/
 
 # Python cache
 __pycache__/
