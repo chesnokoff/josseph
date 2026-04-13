@@ -17,7 +17,6 @@ metric_dependencies.csv
 plots/
 out/
 data/
-examples/sample-run/
 remote-results-current/
 remote-export-final/
 remote-export-with-log/
