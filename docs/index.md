@@ -2,9 +2,6 @@
 
 **JOSSeph** (**J**ava **O**SS metrics **S**oftware) is a Docker-first
 reproducible pipeline for extracting metrics from GitHub Java repositories.
-The name is also a nod to
-[JOSS](https://joss.theoj.org/) (Journal of Open Source Software), reflecting
-the project's focus on open-source software quality research.
 
 One run does this:
 
