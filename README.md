@@ -1,8 +1,8 @@
-# oss-metrics
+# JOSSeph
 
-[![Tests](https://github.com/chesnokoff/oss-metrics/actions/workflows/test.yml/badge.svg)](https://github.com/chesnokoff/oss-metrics/actions/workflows/test.yml)
-[![Integration](https://github.com/chesnokoff/oss-metrics/actions/workflows/integration.yml/badge.svg)](https://github.com/chesnokoff/oss-metrics/actions/workflows/integration.yml)
-[![Docs](https://github.com/chesnokoff/oss-metrics/actions/workflows/deploy-docs.yml/badge.svg)](https://chesnokoff.github.io/oss-metrics/)
+[![Tests](https://github.com/chesnokoff/josseph/actions/workflows/test.yml/badge.svg)](https://github.com/chesnokoff/josseph/actions/workflows/test.yml)
+[![Integration](https://github.com/chesnokoff/josseph/actions/workflows/integration.yml/badge.svg)](https://github.com/chesnokoff/josseph/actions/workflows/integration.yml)
+[![Docs](https://github.com/chesnokoff/josseph/actions/workflows/deploy-docs.yml/badge.svg)](https://chesnokoff.github.io/josseph/)
 
 Container-first pipeline for collecting repository metrics with:
 - CK (static code metrics)
@@ -118,7 +118,7 @@ docker compose down
 ## Notes
 - This setup is container-first for reproducibility.
 - Cloned repositories live in `workspace/projects/` by default and are mounted into the container from `./workspace`.
-- Analysis helpers and operational scripts live outside the repo in `../.oss-metrics-tools/`.
+- Analysis helpers and operational scripts may live outside the repo in a sibling tools directory.
 - `GITHUB_TOKEN` is passed from host environment into `josseph` via `docker-compose.yml`.
 - `sonar` analysis may be slower on large repositories.
 - Sonar Scanner is vendored in `third_party/sonar-scanner` at a fixed version (`7.0.2.4839`).

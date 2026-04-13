@@ -1,8 +1,8 @@
 # Examples
 
-This directory contains reference outputs from a real JOSSeph run on one small
-repository (`https://github.com/GregorStocks/mage-bench`) using the
-`configs/one-repo.yaml` config with `tools: [github, ck]`.
+This directory contains reference outputs from real JOSSeph runs:
+- `GregorStocks@mage-bench`: a minimal example with committed `github.json` and `ck.json`
+- `doocs@advanced-java`: a fuller multi-extractor example with committed `github`, `ck`, `cm`, and `sonar` outputs in both `.json` and `.parquet` formats
 
 ## Directory tree
 
@@ -10,17 +10,23 @@ repository (`https://github.com/GregorStocks/mage-bench`) using the
 examples/sample-run/
   GregorStocks@mage-bench/
     github.json          — metadata for github extractor
-    github.parquet       — github metrics table (not committed; binary)
     ck.json              — metadata for ck extractor
-    ck.parquet           — CK class/method metrics table (not committed; binary)
+  doocs@advanced-java/
+    github.json          — metadata for github extractor
+    github.parquet       — github metrics table
+    ck.json              — metadata for ck extractor
+    ck.parquet           — CK class/method metrics table
+    cm.json              — metadata for change metrics extractor
+    cm.parquet           — change metrics table
+    sonar.json           — metadata for SonarQube extractor
+    sonar.parquet        — SonarQube metrics table
   runs/
     20260328T120000Z/
       summary.json       — pipeline-level run summary
 ```
 
-Parquet files are not committed to the repository (binary, potentially large).
-The `.json` sidecar files are committed as reference artifacts for format
-verification.
+Some examples include only `.json` sidecars, while others intentionally include
+small `.parquet` files as loadable reference artifacts.
 
 ## How to reproduce
 
@@ -33,7 +39,7 @@ docker compose up -d sonarqube
 docker compose run --rm josseph /app/configs/one-repo.yaml
 ```
 
-Results appear under `results/GregorStocks@mage-bench/`.
+Results appear under `results/<owner>@<repo>/`.
 
 ## How to load parquet outputs in Python
 
@@ -41,12 +47,12 @@ Results appear under `results/GregorStocks@mage-bench/`.
 import pandas as pd
 
 # Load CK class-level metrics
-ck = pd.read_parquet("results/GregorStocks@mage-bench/ck.parquet")
+ck = pd.read_parquet("examples/sample-run/doocs@advanced-java/ck.parquet")
 print(ck.columns.tolist())
 print(ck.head())
 
 # Load GitHub metadata
-gh = pd.read_parquet("results/GregorStocks@mage-bench/github.parquet")
+gh = pd.read_parquet("examples/sample-run/doocs@advanced-java/github.parquet")
 print(gh)
 ```
 
@@ -55,8 +61,8 @@ print(gh)
 ```python
 import pandas as pd
 
-ck = pd.read_parquet("results/GregorStocks@mage-bench/ck.parquet")
-gh = pd.read_parquet("results/GregorStocks@mage-bench/github.parquet")
+ck = pd.read_parquet("examples/sample-run/doocs@advanced-java/ck.parquet")
+gh = pd.read_parquet("examples/sample-run/doocs@advanced-java/github.parquet")
 
 # Add repository-level context to all class rows
 gh_row = gh.iloc[0]

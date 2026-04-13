@@ -4,7 +4,7 @@ title: "JOSSeph: A Docker-first pipeline for extracting metrics from Java open-s
 version: 1.0.0
 date-released: "2026-04-02"
 license: MIT
-repository-code: "https://github.com/chesnokoff/oss-metrics"
+repository-code: "https://github.com/chesnokoff/josseph"
 abstract: >
   JOSSeph is a reproducible, Docker-first pipeline for extracting multi-dimensional
   quality metrics from GitHub Java repositories. It integrates four metrics sources:

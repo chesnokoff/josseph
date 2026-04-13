@@ -3,8 +3,8 @@
 ## Development setup
 
 ```bash
-git clone https://github.com/chesnokoff/oss-metrics.git
-cd oss-metrics
+git clone https://github.com/chesnokoff/josseph.git
+cd josseph
 
 # Create and activate a virtual environment
 python -m venv .venv

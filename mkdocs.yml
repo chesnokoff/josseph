@@ -1,6 +1,6 @@
 site_name: JOSSeph
 site_description: OSS Metrics Extraction Pipeline
-site_url: https://chesnokoff.github.io/oss-metrics/
+site_url: https://chesnokoff.github.io/josseph/
 
 theme:
   name: material

@@ -38,7 +38,7 @@ class GithubClient:
     ) -> dict:
         query = f"?{urlencode(params)}" if params else ""
         url = f"https://api.github.com{path}{query}"
-        headers = {"User-Agent": "oss-metrics-pipeline"}
+        headers = {"User-Agent": "josseph-pipeline"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
 

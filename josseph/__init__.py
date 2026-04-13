@@ -1,1 +1,1 @@
-"""oss-metrics package."""
+"""JOSSeph package."""
