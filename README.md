@@ -3,6 +3,7 @@
 [![Tests](https://github.com/chesnokoff/josseph/actions/workflows/test.yml/badge.svg)](https://github.com/chesnokoff/josseph/actions/workflows/test.yml)
 [![Integration](https://github.com/chesnokoff/josseph/actions/workflows/integration.yml/badge.svg)](https://github.com/chesnokoff/josseph/actions/workflows/integration.yml)
 [![Docs](https://github.com/chesnokoff/josseph/actions/workflows/deploy-docs.yml/badge.svg)](https://chesnokoff.github.io/josseph/)
+[![DOI](https://zenodo.org/badge/1209711267.svg)](https://doi.org/10.5281/zenodo.19559305)
 
 Container-first pipeline for collecting repository metrics with:
 - CK (static code metrics)
