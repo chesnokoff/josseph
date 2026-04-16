@@ -30,7 +30,7 @@ josseph/
 ## Execution flow
 
 ```
-docker compose run --rm josseph configs/run.yaml
+docker compose run --rm josseph configs/config.yaml
         │
         ▼
 __main__.py          parse args → RepositoryAnalysisPipeline.run(args)
@@ -106,8 +106,7 @@ commit after cloning.
 
 ## Adding a new extractor
 
-See the [Extensibility](../README.md#extensibility-api) section of the README
-for the full API contract. In short:
+The extractor API contract is intentionally small. In short:
 
 1. Add `josseph/metrics/extractors/my_extractor.py`
 2. Define `EXTRACTOR_NAME`, `build_extractor(context, settings)`, and a

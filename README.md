@@ -143,7 +143,7 @@ project's MIT license.
 | Tool | Version | License | Source |
 |------|---------|---------|--------|
 | CK | 0.7.1 | Apache 2.0 | [github.com/mauricioaniche/ck](https://github.com/mauricioaniche/ck) |
-| CM | — | Apache 2.0 | [github.com/mauricioaniche/cm](https://github.com/mauricioaniche/cm) |
+| CM | — | Apache 2.0 | [github.com/mauricioaniche/change-metrics](https://github.com/mauricioaniche/change-metrics) |
 | Sonar Scanner | 7.0.2.4839 | LGPL 3.0 | [github.com/SonarSource/sonar-scanner-cli](https://github.com/SonarSource/sonar-scanner-cli) |
 | SonarQube (Docker) | 25.5.0.107428-community | LGPL 3.0 | [github.com/SonarSource/sonarqube](https://github.com/SonarSource/sonarqube) |
 

@@ -120,6 +120,8 @@ extractor_settings:
 
 ## Exit behavior
 
+- successful runs without repository-level failures return exit code `0`; extractor-level failures are non-fatal and are recorded in `summary.json`
+- repository-level failures return exit code `1`
 - config load failure returns exit code `2`
 - if config fails before `RunReportCollector` is created, no `summary.json` is written
 - if config loads but runtime preparation fails later, `summary.json` is still written with `exit_code: 2`

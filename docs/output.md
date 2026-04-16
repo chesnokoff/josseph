@@ -63,7 +63,7 @@ Example:
   "duration_seconds": 12.0,
   "exit_code": 1,
   "config": {
-    "config_path": "/workspace/configs/run.yaml",
+    "config_path": "/workspace/configs/config.yaml",
     "repositories": [
       {
         "repo_url": "https://github.com/example/repo.git",

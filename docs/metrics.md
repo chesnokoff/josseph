@@ -36,7 +36,7 @@ The extractor writes one CK result set to a single parquet file.
 
 ## cm — Change metrics
 
-**Tool:** [CM](https://github.com/mauricioaniche/code-changes-miner) — process
+**Tool:** [CM](https://github.com/mauricioaniche/change-metrics) — process
 metrics derived from git history.
 
 **Requires checkout:** yes

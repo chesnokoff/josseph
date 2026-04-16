@@ -6,6 +6,7 @@
 .claude/
 .venv/
 .pytest_cache/
+.coverage
 josseph.egg-info/
 
 # Pipeline outputs
@@ -25,6 +26,7 @@ third_party/sonar-scanner/sonar-scanner-*/
 
 # Publication artifacts
 SoftwareX/
+site/
 
 # Python cache
 __pycache__/

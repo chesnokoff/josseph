@@ -36,7 +36,7 @@ cp .env.example .env
 
 docker compose build josseph
 docker compose up -d sonarqube
-docker compose run --rm josseph /app/configs/one-repo.yaml
+docker compose run --rm josseph configs/one-repo.yaml
 ```
 
 Results appear under `results/<owner>@<repo>/`.
