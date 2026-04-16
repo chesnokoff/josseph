@@ -20,6 +20,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install mkdocs mkdocs-material
+      - run: pip install mkdocs==1.6.1 mkdocs-material==9.7.6
+
+      - run: mkdocs build --strict
 
       - run: mkdocs gh-deploy --force
