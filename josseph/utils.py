@@ -1,12 +1,13 @@
 import logging
+import logging.config
 import os
 import ssl
-import time
 import sys
+import time
 from collections.abc import Callable
-from logging import config
+from contextlib import suppress
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 from urllib.error import HTTPError, URLError
 
 import certifi
@@ -27,6 +28,7 @@ PROJECTS_DIR = (
 )
 
 _LOGGING_CONFIGURED = False
+TRACE_LEVEL = 5
 T = TypeVar("T")
 
 
@@ -39,39 +41,37 @@ def next_logfile(log_dir: Path, prefix: str) -> Path:
 
     nums = []
     for p in log_dir.glob(f"{prefix}-*.log"):
-        try:
+        with suppress(ValueError):
             nums.append(int(p.stem.split("-")[-1]))
-        except ValueError:
-            pass
 
     n = max(nums, default=0) + 1
     return log_dir / f"{prefix}-{n:04d}.log"
 
 
-def setup_logconfig():
+def setup_logconfig() -> None:
     logfile = next_logfile(ROOT / "logs", "josseph")
+    defaults: dict[str, Any] = {"sys": sys, "logfile": str(logfile)}
 
     logging.config.fileConfig(
         ROOT / "logging.ini",
-        defaults={"sys": sys, "logfile": str(logfile)},
+        defaults=defaults,
         disable_existing_loggers=False,
     )
 
     logging.getLogger("josseph").info("Logging to %s", logfile)
 
 
-def setup_trace():
-    TRACE = 5
-    if getattr(logging, "TRACE", None) != TRACE:
-        logging.addLevelName(TRACE, "TRACE")
-    setattr(logging, "TRACE", TRACE)
+def setup_trace() -> None:
+    if getattr(logging, "TRACE", None) != TRACE_LEVEL:
+        logging.addLevelName(TRACE_LEVEL, "TRACE")
+    logging.TRACE = TRACE_LEVEL  # type: ignore[attr-defined]
 
-    def trace(self: logging.Logger, msg, *args, **kwargs):
-        if self.isEnabledFor(TRACE):
+    def trace(self: logging.Logger, msg: object, *args: Any, **kwargs: Any) -> None:
+        if self.isEnabledFor(TRACE_LEVEL):
             kwargs.setdefault("stacklevel", 2)
-            self._log(TRACE, msg, args, **kwargs)
+            self._log(TRACE_LEVEL, msg, args, **kwargs)
 
-    logging.Logger.trace = trace
+    logging.Logger.trace = trace  # type: ignore[attr-defined]
 
 
 def setup_logging() -> None:
@@ -88,10 +88,8 @@ def create_ssl_context() -> ssl.SSLContext:
 
     context = ssl.create_default_context()
     if certifi is not None:
-        try:
+        with suppress(Exception):
             context.load_verify_locations(certifi.where())
-        except Exception:  # pragma: no cover - best effort
-            pass
     return context
 
 

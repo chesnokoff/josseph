@@ -7,6 +7,7 @@ import pytest
 from josseph.metrics.registry import ExtractorFactoryContext, ExtractorRegistry
 from josseph.pipeline.extractor_factory import select_extractors
 
+
 class DummyRunner:
     def run(self, cmd, *, cwd=None, env=None, timeout=None):
         return ""

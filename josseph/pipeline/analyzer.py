@@ -8,8 +8,8 @@ from pathlib import Path
 from josseph.domain.repository import AnalysisTarget, RepositorySpec
 from josseph.metrics.abstract_extractor import MetricExtractor
 from josseph.pipeline.cloner import RepositoryCloner, cloned_repository
-from josseph.pipeline.run_report import RunReportCollector
 from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
+from josseph.pipeline.run_report import RunReportCollector
 from josseph.process import CommandExecutionError, CommandRunner
 from josseph.utils import AnalysisError
 
@@ -170,11 +170,15 @@ class RepositoryAnalyzer:
                 ["git", "rev-parse", "HEAD"],
                 cwd=project_dir,
             ).strip()
-        except (CommandExecutionError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        except (
+            CommandExecutionError,
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+        ) as exc:
             raise RepositoryAnalysisError(
                 f"Unable to resolve HEAD for {target.project_name} at {project_dir}: {exc}"
             ) from exc
-        self.log.trace("Resolved HEAD commit hash %s for %s", commit_hash, project_dir)
+        self.log.log(5, "Resolved HEAD commit hash %s for %s", commit_hash, project_dir)
         return commit_hash
 
     def _run_extractors(

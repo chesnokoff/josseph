@@ -9,10 +9,12 @@ from pathlib import Path
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
 from josseph.metrics.registry import ExtractorFactoryContext
-from josseph.process import CommandExecutionError
-from josseph.process import CommandRunner
-from josseph.process import clean_command_stream
-from josseph.process import describe_command_failure
+from josseph.process import (
+    CommandExecutionError,
+    CommandRunner,
+    clean_command_stream,
+    describe_command_failure,
+)
 from josseph.utils import AnalysisError
 
 EXTRACTOR_NAME = "cm"
@@ -31,9 +33,11 @@ class CmExtractor(MetricExtractor):
         self.cm_timeout_seconds = timeout_seconds
         self.cm_jar = third_party_path / "cm" / "cm.jar"
         if not self.cm_jar.exists():
-            raise AnalysisError(f"CM jar not found at {self.cm_jar}. Build it before running the analysis.")
+            raise AnalysisError(
+                f"CM jar not found at {self.cm_jar}. Build it before running the analysis."
+            )
 
-    def run(self, target: AnalysisTarget) -> list[dict[str, str]]:
+    def run(self, target: AnalysisTarget) -> list[dict[str, object]]:
         repo_path = _require_checkout(target)
         with tempfile.TemporaryDirectory() as temp_dir_name:
             temp_dir = Path(temp_dir_name)
@@ -46,7 +50,7 @@ class CmExtractor(MetricExtractor):
             if not csv_file.exists():
                 raise AnalysisError(f"CM metrics output file not found: {csv_file}")
 
-            metrics = []
+            metrics: list[dict[str, object]] = []
 
             with csv_file.open(newline="") as fh:
                 for row in csv.DictReader(fh):
@@ -71,13 +75,22 @@ class CmExtractor(MetricExtractor):
             )
         except AnalysisError:
             raise
-        except (CommandExecutionError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        except (
+            CommandExecutionError,
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+        ) as exc:
             raise AnalysisError(describe_command_failure("CM", command, exc)) from exc
         except Exception as exc:
             raise AnalysisError(f"CM execution failed: {exc}") from exc
 
         if output:
-            self.log.log(5, "CM command output for %s:\n%s", repo_path, clean_command_stream(output).strip())
+            self.log.log(
+                5,
+                "CM command output for %s:\n%s",
+                repo_path,
+                clean_command_stream(output).strip(),
+            )
 
 
 def _require_checkout(target: AnalysisTarget) -> Path:
@@ -96,8 +109,14 @@ def build_extractor(
         unknown_list = ", ".join(unknown)
         raise ValueError(f"Unknown setting(s) for extractor 'cm': {unknown_list}")
 
-    timeout_default = _parse_positive_int(context.env.get("CM_TIMEOUT_SECONDS", "3600"), "CM_TIMEOUT_SECONDS")
-    timeout_value = _parse_positive_int(settings.get("timeout_seconds", timeout_default), "cm.timeout_seconds")
+    timeout_default = _parse_positive_int(
+        context.env.get("CM_TIMEOUT_SECONDS", "3600"),
+        "CM_TIMEOUT_SECONDS",
+    )
+    timeout_value = _parse_positive_int(
+        settings.get("timeout_seconds", timeout_default),
+        "cm.timeout_seconds",
+    )
 
     return CmExtractor(
         third_party_path=context.third_party_path,

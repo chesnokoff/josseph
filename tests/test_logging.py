@@ -9,7 +9,7 @@ def test_setup_trace_registers_trace_level_and_method():
     setup_trace()
 
     assert logging.getLevelName(logging.TRACE) == "TRACE"
-    assert callable(getattr(logging.getLogger("josseph"), "trace"))
+    assert callable(logging.getLogger("josseph").trace)
 
 
 def test_next_logfile_uses_highest_available_suffix(tmp_path):

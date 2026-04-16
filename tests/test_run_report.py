@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from josseph.domain.repository import RepositorySpec
 from josseph.pipeline.config import AnalysisConfig
@@ -25,7 +25,7 @@ def make_config(tmp_path) -> AnalysisConfig:
 
 
 def test_run_report_writes_summary(tmp_path):
-    started_at = datetime(2026, 3, 22, 15, 0, 0, tzinfo=timezone.utc)
+    started_at = datetime(2026, 3, 22, 15, 0, 0, tzinfo=UTC)
     collector = RunReportCollector(
         config=make_config(tmp_path),
         results_dir=tmp_path / "results",
@@ -70,7 +70,7 @@ def test_run_report_writes_summary(tmp_path):
 
 
 def test_run_report_records_repository_failures(tmp_path):
-    started_at = datetime(2026, 3, 22, 15, 0, 0, tzinfo=timezone.utc)
+    started_at = datetime(2026, 3, 22, 15, 0, 0, tzinfo=UTC)
     collector = RunReportCollector(
         config=make_config(tmp_path),
         results_dir=tmp_path / "results",

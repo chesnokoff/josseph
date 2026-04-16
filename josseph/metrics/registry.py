@@ -1,10 +1,10 @@
 """Simple registry for metric tools."""
 from __future__ import annotations
 
-from importlib import import_module
 import logging
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from importlib import import_module
 from pathlib import Path
 from pkgutil import iter_modules
 
@@ -83,7 +83,8 @@ def discover_extractors(package_name: str) -> dict[str, ExtractorFactory]:
         extractor_name = extractor_name.strip()
         if not callable(factory):
             raise ValueError(
-                f"Extractor module '{module.__name__}' must define build_extractor(context, settings)"
+                f"Extractor module '{module.__name__}' must define "
+                "build_extractor(context, settings)"
             )
         if extractor_name in factories:
             raise ValueError(f"Duplicate extractor registration for '{extractor_name}'")

@@ -13,10 +13,12 @@ from uuid import uuid4
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
 from josseph.metrics.registry import ExtractorFactoryContext
-from josseph.process import CommandExecutionError
-from josseph.process import CommandRunner
-from josseph.process import clean_command_stream
-from josseph.process import describe_command_failure
+from josseph.process import (
+    CommandExecutionError,
+    CommandRunner,
+    clean_command_stream,
+    describe_command_failure,
+)
 from josseph.providers.sonar import SonarClient
 from josseph.utils import AnalysisError
 
@@ -33,7 +35,7 @@ class SonarScannerSettings:
     options: str
 
     @classmethod
-    def from_env(cls, env: dict[str, str]) -> "SonarScannerSettings":
+    def from_env(cls, env: dict[str, str]) -> SonarScannerSettings:
         instance_port = env.get("SONAR_INSTANCE_PORT", "9234")
         host_url = env.get("SONAR_HOST_URL", f"http://localhost:{instance_port}")
         empty_binaries_dir = env.get("SONAR_EMPTY_BINARIES_DIR", ".sonar-empty-binaries")
@@ -85,8 +87,14 @@ class SonarScanner:
             )
         except AnalysisError:
             raise
-        except (CommandExecutionError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-            raise AnalysisError(describe_command_failure("sonar-scanner", scanner_command, exc)) from exc
+        except (
+            CommandExecutionError,
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+        ) as exc:
+            raise AnalysisError(
+                describe_command_failure("sonar-scanner", scanner_command, exc)
+            ) from exc
         except Exception as exc:
             raise AnalysisError(f"sonar-scanner failed: {exc}") from exc
 
@@ -134,7 +142,7 @@ class SonarExtractor(MetricExtractor):
         self._scanner = scanner
         self._semaphore = concurrency_semaphore
 
-    def run(self, target: AnalysisTarget) -> list[dict[str, str]]:
+    def run(self, target: AnalysisTarget) -> list[dict[str, object]]:
         if self._semaphore is not None:
             self._semaphore.acquire()
         try:
@@ -143,7 +151,7 @@ class SonarExtractor(MetricExtractor):
             if self._semaphore is not None:
                 self._semaphore.release()
 
-    def _run_scan(self, target: AnalysisTarget) -> list[dict[str, str]]:
+    def _run_scan(self, target: AnalysisTarget) -> list[dict[str, object]]:
         repo_path = _require_checkout(target)
         sonar_project_key = _build_sonar_project_key(target)
         created_project = False
@@ -175,14 +183,18 @@ class SonarExtractor(MetricExtractor):
 
         return [self._convert_sonar_metrics(metrics)]
 
-    def _convert_sonar_metrics(self, data: dict[str, object]) -> dict[str, str]:
-        measures = data.get("measures", [])
+    def _convert_sonar_metrics(self, data: dict[str, object]) -> dict[str, object]:
+        raw_measures = data.get("measures", [])
+        if not isinstance(raw_measures, list):
+            return {}
 
-        result = {}
-        for measure in measures:
+        result: dict[str, object] = {}
+        for measure in raw_measures:
+            if not isinstance(measure, dict):
+                continue
             key = measure.get("metric")
             value = measure.get("value")
-            if not key:
+            if not isinstance(key, str) or not key:
                 continue
             result[key] = "" if value is None else str(value)
 
@@ -225,8 +237,12 @@ def build_extractor(
     settings: dict[str, object],
 ) -> SonarExtractor:
     env = _build_sonar_environment(context.env, settings)
+    host_url = env.get(
+        "SONAR_HOST_URL",
+        f"http://localhost:{env.get('SONAR_INSTANCE_PORT', '9234')}",
+    )
     sonar_client = SonarClient(
-        host_url=env.get("SONAR_HOST_URL", f"http://localhost:{env.get('SONAR_INSTANCE_PORT', '9234')}"),
+        host_url=host_url,
         admin_user=env.get("SONAR_ADMIN_USER", "admin"),
         admin_password=env.get("SONAR_ADMIN_PASSWORD", "admin"),
         admin_default_password=env.get("SONAR_ADMIN_DEFAULT_PASSWORD", "admin"),

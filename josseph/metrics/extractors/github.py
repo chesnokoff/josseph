@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from josseph.domain.repository import AnalysisTarget
 from josseph.metrics.abstract_extractor import MetricExtractor
@@ -39,7 +40,7 @@ class GithubExtractor(MetricExtractor):
 
         return [metrics]
 
-    def _format_repo_metrics(self, repo_data: dict, slug: str) -> dict[str, object]:
+    def _format_repo_metrics(self, repo_data: dict[str, Any], slug: str) -> dict[str, object]:
         mapping = {
             "full_name": repo_data.get("full_name", slug),
             "description": repo_data.get("description", ""),

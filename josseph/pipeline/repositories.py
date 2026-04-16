@@ -90,7 +90,8 @@ def _deduplicate_repositories(
 
     for repository in repositories:
         commit_for_project = commits_by_project.get(repository.project_name)
-        if commit_for_project != repository.requested_commit_hash and repository.project_name in commits_by_project:
+        has_seen_project = repository.project_name in commits_by_project
+        if has_seen_project and commit_for_project != repository.requested_commit_hash:
             raise ValueError(
                 f"Repository list {path} contains multiple entries for "
                 f"{repository.project_name} with different requested commits"

@@ -20,4 +20,4 @@ def test_projects_dir_uses_workspace_override(monkeypatch):
 
     module = importlib.reload(utils)
 
-    assert module.PROJECTS_DIR == module.Path("/tmp/custom-workspace") / "projects"
+    assert module.Path("/tmp/custom-workspace") / "projects" == module.PROJECTS_DIR

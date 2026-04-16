@@ -1,10 +1,10 @@
 """Command execution abstractions."""
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
 import shlex
-from pathlib import Path
 import subprocess
+from collections.abc import Iterable, Mapping
+from pathlib import Path
 from typing import Protocol
 
 
@@ -105,10 +105,7 @@ def format_command(command: Iterable[str]) -> str:
 def clean_command_stream(stream: object | None) -> str:
     if stream is None:
         return ""
-    if isinstance(stream, bytes):
-        text = stream.decode("utf-8", errors="replace")
-    else:
-        text = stream
+    text = stream.decode("utf-8", errors="replace") if isinstance(stream, bytes) else str(stream)
     text = text.strip()
     if len(text) <= 4000:
         return text
@@ -154,7 +151,10 @@ def _describe_command_exit(
     stdout: object,
     stderr: object,
 ) -> str:
-    message = f"{tool_name} execution failed with exit code {returncode}: {format_command(command)}"
+    message = (
+        f"{tool_name} execution failed with exit code {returncode}: "
+        f"{format_command(command)}"
+    )
     details = command_output_details(stdout, stderr)
     if details:
         message = f"{message}\n{details}"
@@ -169,7 +169,10 @@ def _describe_command_timeout(
     stderr: object,
 ) -> str:
     timeout_text = timeout if timeout is not None else "unknown"
-    message = f"{tool_name} execution timed out after {timeout_text} seconds: {format_command(command)}"
+    message = (
+        f"{tool_name} execution timed out after {timeout_text} seconds: "
+        f"{format_command(command)}"
+    )
     details = command_output_details(stdout, stderr)
     if details:
         message = f"{message}\n{details}"

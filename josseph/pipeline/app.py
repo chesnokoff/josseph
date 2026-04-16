@@ -3,14 +3,15 @@ from __future__ import annotations
 
 import logging
 import os
+from argparse import Namespace
 
 from josseph.metrics.registry import ExtractorFactoryContext, ExtractorRegistry
 from josseph.pipeline.analyzer import RepositoryAnalyzer
 from josseph.pipeline.cloner import RepositoryCloner
 from josseph.pipeline.config import build_config
 from josseph.pipeline.extractor_factory import select_extractors
-from josseph.pipeline.run_report import RunReportCollector
 from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
+from josseph.pipeline.run_report import RunReportCollector
 from josseph.pipeline.runner import AnalysisRunner
 from josseph.process import SubprocessCommandRunner
 from josseph.utils import PROJECTS_DIR, RESULTS_DIR, THIRD_PARTY_DIR, setup_logging
@@ -22,7 +23,7 @@ class RepositoryAnalysisPipeline:
             f"{self.__class__.__module__}.{self.__class__.__name__}"
         )
 
-    def run(self, args) -> int:
+    def run(self, args: Namespace) -> int:
         setup_logging()
         try:
             config = build_config(args)

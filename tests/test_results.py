@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pandas as pd
 
@@ -26,7 +26,7 @@ def test_result_directory_manager_requires_parquet_and_metadata(tmp_path):
 def test_result_writer_persists_parquet_and_metadata(tmp_path):
     writer = ResultWriter()
     output_dir = tmp_path / "example@repo"
-    collected_at = datetime(2026, 3, 22, 12, 34, 56, tzinfo=timezone.utc)
+    collected_at = datetime(2026, 3, 22, 12, 34, 56, tzinfo=UTC)
 
     writer.write(
         output_dir,

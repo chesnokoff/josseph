@@ -2,8 +2,8 @@ import argparse
 import logging
 import sys
 
-from josseph.utils import CONFIGS_DIR
 from josseph.pipeline.app import RepositoryAnalysisPipeline
+from josseph.utils import CONFIGS_DIR
 
 
 def parse_args() -> argparse.Namespace:
@@ -28,14 +28,14 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     print("""
-       _  ____   _____ _____            _     
-      | |/ __ \\ / ____/ ____|          | |    
-      | | |  | | (___| (___   ___ _ __ | |__  
-  _   | | |  | |\\___ \\\\___ \\ / _ \\ '_ \\| '_ \\ 
+       _  ____   _____ _____            _
+      | |/ __ \\ / ____/ ____|          | |
+      | | |  | | (___| (___   ___ _ __ | |__
+  _   | | |  | |\\___ \\\\___ \\ / _ \\ '_ \\| '_ \\
  | |__| | |__| |____) |___) |  __/ |_) | | | |
   \\____/ \\____/|_____/_____/ \\___| .__/|_| |_|
-                                 | |          
-                                 |_|          
+                                 | |
+                                 |_|
 """)
     try:
         return RepositoryAnalysisPipeline().run(args)
@@ -46,6 +46,7 @@ def main() -> int:
         else:
             print(f"ERROR: {exc}", file=sys.stderr)
         return 2
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

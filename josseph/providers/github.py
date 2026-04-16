@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 import logging
 import time
+from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from josseph.domain.repository import RepositoryRef
-from josseph.utils import AnalysisError
-from josseph.utils import create_ssl_context
-from josseph.utils import retry_http_request
+from josseph.utils import AnalysisError, create_ssl_context, retry_http_request
 
 
 class GithubClient:
@@ -21,7 +20,7 @@ class GithubClient:
         self.log = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
         self._token = token
 
-    def get_repo(self, slug: str) -> dict:
+    def get_repo(self, slug: str) -> dict[str, Any]:
         return self._request_json(f"/repos/{slug}")
 
     @staticmethod
@@ -35,7 +34,7 @@ class GithubClient:
         params: dict[str, str] | None = None,
         *,
         max_retries: int | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         query = f"?{urlencode(params)}" if params else ""
         url = f"https://api.github.com{path}{query}"
         headers = {"User-Agent": "josseph-pipeline"}
@@ -46,7 +45,7 @@ class GithubClient:
         ssl_context = create_ssl_context()
         request_name = "GitHub API request"
 
-        def perform_request() -> dict:
+        def perform_request() -> dict[str, Any]:
             request = Request(url, headers=headers)
             with urlopen(  # noqa: S310
                 request,
@@ -55,11 +54,14 @@ class GithubClient:
             ) as response:
                 payload = response.read().decode("utf-8")
                 try:
-                    return json.loads(payload)
+                    loaded = json.loads(payload)
                 except json.JSONDecodeError as exc:
                     raise AnalysisError(
                         f"Invalid JSON response from GitHub API at {url}: {exc}"
                     ) from exc
+                if not isinstance(loaded, dict):
+                    raise AnalysisError(f"Invalid JSON object from GitHub API at {url}")
+                return cast(dict[str, Any], loaded)
 
         try:
             return retry_http_request(
@@ -76,7 +78,7 @@ class GithubClient:
         except HTTPError as exc:
             raise AnalysisError(self._format_http_error(url, exc)) from exc
         except URLError as exc:
-            if getattr(exc.reason, "__class__", None).__name__ == "SSLCertVerificationError":
+            if exc.reason.__class__.__name__ == "SSLCertVerificationError":
                 raise AnalysisError(
                     "GitHub API request failed due to SSL certificate verification. "
                     "Install the 'certifi' package or configure your system trust store."
@@ -105,7 +107,7 @@ class GithubClient:
 
     @staticmethod
     def _is_retryable_url_error(exc: URLError) -> bool:
-        reason_name = getattr(exc.reason, "__class__", None).__name__
+        reason_name = exc.reason.__class__.__name__
         return reason_name in {"TimeoutError", "Timeout", "OSError"}
 
     @staticmethod

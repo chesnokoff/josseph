@@ -19,10 +19,7 @@ from josseph.metrics.extractors.sonar import (
     _build_sonar_project_key,
 )
 from josseph.providers.github import GithubClient
-from josseph.providers.sonar import SonarClient
-from josseph.utils import AnalysisError
-from josseph.utils import setup_trace
-
+from josseph.utils import AnalysisError, setup_trace
 
 setup_trace()
 

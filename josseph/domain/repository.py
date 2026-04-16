@@ -15,7 +15,7 @@ class RepositoryRef:
     name: str
 
     @classmethod
-    def parse(cls, value: str) -> "RepositoryRef":
+    def parse(cls, value: str) -> RepositoryRef:
         raw = value.strip()
         if not raw:
             raise ValueError("Repository reference cannot be empty")
@@ -63,15 +63,15 @@ class RepositorySpec:
         value: str,
         *,
         requested_commit_hash: str | None = None,
-    ) -> "RepositorySpec":
+    ) -> RepositorySpec:
         return cls(
             repository=RepositoryRef.parse(value),
             requested_commit_hash=_normalize_commit_hash(requested_commit_hash),
         )
 
     @classmethod
-    def coerce(cls, value: str | "RepositorySpec") -> "RepositorySpec":
-        if isinstance(value, cls):
+    def coerce(cls, value: str | RepositorySpec) -> RepositorySpec:
+        if isinstance(value, RepositorySpec):
             return value
         return cls.from_url(value)
 
@@ -92,8 +92,9 @@ class RepositorySpec:
     def matches_resolved_commit(self, resolved_commit_hash: str) -> bool:
         if self.requested_commit_hash is None:
             return True
-        return resolved_commit_hash == self.requested_commit_hash or resolved_commit_hash.startswith(
-            self.requested_commit_hash
+        return (
+            resolved_commit_hash == self.requested_commit_hash
+            or resolved_commit_hash.startswith(self.requested_commit_hash)
         )
 
 
@@ -114,7 +115,7 @@ class AnalysisTarget:
     def repo_slug(self) -> str:
         return self.repository.slug
 
-    def with_checkout(self, checkout_path: Path, commit_hash: str) -> "AnalysisTarget":
+    def with_checkout(self, checkout_path: Path, commit_hash: str) -> AnalysisTarget:
         return replace(self, checkout_path=checkout_path, commit_hash=commit_hash)
 
 

@@ -10,7 +10,6 @@ import pytest
 from josseph.pipeline.app import RepositoryAnalysisPipeline
 from josseph.utils import THIRD_PARTY_DIR
 
-
 REAL_REPOSITORY = "https://github.com/junit-team/junit4.git"
 
 

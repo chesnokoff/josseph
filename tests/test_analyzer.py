@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from josseph.domain.repository import RepositorySpec
 from josseph.pipeline.analyzer import RepositoryAnalyzer
@@ -106,7 +106,7 @@ def test_repository_analyzer_persists_commit_hash_for_checkout_extractors(tmp_pa
     assert metadata["metric_binding"] == "revision-bound"
     assert datetime.fromisoformat(
         metadata["collected_at_utc"].replace("Z", "+00:00")
-    ).tzinfo == timezone.utc
+    ).tzinfo == UTC
     assert extractor.targets[0].checkout_path == checkout_dir
     assert extractor.targets[0].commit_hash == "abc123"
 
@@ -136,7 +136,7 @@ def test_repository_analyzer_passes_domain_target_to_api_extractors(tmp_path):
     assert metadata["metric_binding"] == "observation-bound"
     assert datetime.fromisoformat(
         metadata["collected_at_utc"].replace("Z", "+00:00")
-    ).tzinfo == timezone.utc
+    ).tzinfo == UTC
 
 
 def test_repository_analyzer_records_extractor_failures_and_continues(tmp_path):

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -72,7 +72,7 @@ class ResultWriter:
         self,
         path: Path,
         tool_name: str,
-        rows: list[dict],
+        rows: list[dict[str, object]],
         commit_hash: str,
         requested_commit_hash: str | None,
         metric_binding: str,
@@ -85,8 +85,8 @@ class ResultWriter:
         df = pd.DataFrame(rows)
         df.to_parquet(out, index=False, engine="pyarrow", compression="zstd")
         metadata_path = path / f"{tool_name}.json"
-        timestamp = collected_at or datetime.now(timezone.utc)
-        timestamp_text = timestamp.astimezone(timezone.utc).replace(microsecond=0).strftime(
+        timestamp = collected_at or datetime.now(UTC)
+        timestamp_text = timestamp.astimezone(UTC).replace(microsecond=0).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
         metadata = {

@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import json
+from contextlib import suppress
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
 
@@ -12,7 +13,7 @@ from josseph.pipeline.config import AnalysisConfig
 
 
 def _format_utc(timestamp: datetime) -> str:
-    return timestamp.astimezone(timezone.utc).replace(microsecond=0).strftime(
+    return timestamp.astimezone(UTC).replace(microsecond=0).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
     )
 
@@ -33,7 +34,7 @@ class RunReportCollector:
     ) -> None:
         self._lock = Lock()
         self._config = config
-        self._started_at = (started_at or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        self._started_at = (started_at or datetime.now(UTC)).astimezone(UTC)
         self._run_id = self._started_at.strftime("%Y%m%dT%H%M%SZ")
         self._artifacts = self._prepare_artifacts(results_dir)
         self._skipped_runs: list[dict[str, object]] = []
@@ -97,10 +98,8 @@ class RunReportCollector:
         reason: str,
     ) -> None:
         project_name: str | None = None
-        try:
+        with suppress(Exception):
             project_name = RepositoryRef.parse(repo_url).project_name
-        except Exception:  # noqa: BLE001 - failure reporting must not fail the run
-            pass
         self._record_event(
             self._failed_runs,
             {
@@ -113,7 +112,7 @@ class RunReportCollector:
         )
 
     def write_summary(self, *, finished_at: datetime | None = None, exit_code: int) -> Path:
-        finished = (finished_at or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        finished = (finished_at or datetime.now(UTC)).astimezone(UTC)
         duration_seconds = round((finished - self._started_at).total_seconds(), 3)
         repository_failures = [
             event for event in self._failed_runs if event.get("scope") == "repository"
@@ -167,6 +166,6 @@ class RunReportCollector:
             target.append(
                 {
                     **event,
-                    "recorded_at_utc": _format_utc(datetime.now(timezone.utc)),
+                    "recorded_at_utc": _format_utc(datetime.now(UTC)),
                 }
             )

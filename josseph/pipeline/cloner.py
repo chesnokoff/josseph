@@ -5,6 +5,7 @@ import logging
 import shutil
 import tempfile
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -47,7 +48,7 @@ class RepositoryCloner:
             )
             cmd = self._build_clone_command(repo_url, staging_dir)
             try:
-                self.log.trace(self._command_runner.run(cmd))
+                self.log.log(5, self._command_runner.run(cmd))
                 self._checkout_requested_commit(staging_dir, repository)
                 self._remove_path(target)
                 staging_dir.replace(target)
@@ -95,7 +96,8 @@ class RepositoryCloner:
             requested_commit_hash,
             repository.project_name,
         )
-        self.log.trace(
+        self.log.log(
+            5,
             self._command_runner.run(
                 ["git", "checkout", "--detach", requested_commit_hash],
                 cwd=repo_path,
@@ -138,7 +140,7 @@ class RepositoryCloner:
 def cloned_repository(
     cloner: RepositoryCloner,
     repository: str | RepositorySpec,
-):
+) -> Iterator[Path]:
     repo_path = cloner.clone(repository)
     try:
         yield repo_path

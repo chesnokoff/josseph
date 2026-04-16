@@ -8,9 +8,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from base64 import b64encode
+from typing import Any, cast
 
-from josseph.utils import AnalysisError
-from josseph.utils import retry_http_request
+from josseph.utils import AnalysisError, retry_http_request
 
 
 class SonarClient:
@@ -47,7 +47,8 @@ class SonarClient:
 
     def get_system_status(self) -> str:
         response = self.request_json("GET", "/api/system/status")
-        return response.get("status", "")
+        status = response.get("status", "")
+        return status if isinstance(status, str) else ""
 
     def ensure_admin_password(self) -> None:
         try:
@@ -90,7 +91,7 @@ class SonarClient:
             params={"name": str(int(time.time() * 1_000_000))},
         )
         token = response.get("token")
-        if not token:
+        if not isinstance(token, str) or not token:
             raise AnalysisError("Failed to generate SonarQube token.")
         return token
 
@@ -104,7 +105,12 @@ class SonarClient:
                 auth=(self.admin_user, self.admin_password),
                 params={"projectKey": project_key},
             )
-            last_status = response.get("projectStatus", {}).get("status", "")
+            project_status = response.get("projectStatus", {})
+            if isinstance(project_status, dict):
+                status = project_status.get("status", "")
+                last_status = status if isinstance(status, str) else ""
+            else:
+                last_status = ""
             if last_status and last_status != "NONE":
                 return
             time.sleep(1)
@@ -119,7 +125,12 @@ class SonarClient:
             "/api/metrics/search",
             auth=(self.admin_user, self.admin_password),
         )
-        metrics = [metric["key"] for metric in metrics_payload.get("metrics", []) if "key" in metric]
+        raw_metrics = metrics_payload.get("metrics", [])
+        metrics = [
+            metric["key"]
+            for metric in raw_metrics
+            if isinstance(metric, dict) and isinstance(metric.get("key"), str)
+        ]
         if not metrics:
             raise AnalysisError("Failed to fetch metrics list from SonarQube.")
 
@@ -133,7 +144,13 @@ class SonarClient:
                 auth=(self.admin_user, self.admin_password),
                 params={"component": project_key, "metricKeys": batch},
             )
-            measures.extend(response.get("component", {}).get("measures", []))
+            component = response.get("component", {})
+            if isinstance(component, dict):
+                raw_measures = component.get("measures", [])
+                if isinstance(raw_measures, list):
+                    measures.extend(
+                        measure for measure in raw_measures if isinstance(measure, dict)
+                    )
         return {"project": project_key, "measures": measures}
 
     def delete_project(self, project_key: str) -> None:
@@ -150,8 +167,8 @@ class SonarClient:
         path: str,
         *,
         auth: tuple[str, str] | None = None,
-        params: dict | None = None,
-        data: dict | None = None,
+        params: dict[str, object] | None = None,
+        data: dict[str, object] | None = None,
         timeout: int | float | None = None,
         max_retries: int | None = None,
     ) -> bytes:
@@ -166,9 +183,10 @@ class SonarClient:
         request = urllib.request.Request(url, method=method, headers=headers, data=payload)
         request_timeout = self.request_timeout_seconds if timeout is None else timeout
         retries = self.max_retries if max_retries is None else max_retries
+
         def perform_request() -> bytes:
             with urllib.request.urlopen(request, timeout=request_timeout) as response:
-                return response.read()
+                return cast(bytes, response.read())
 
         try:
             return retry_http_request(
@@ -193,16 +211,19 @@ class SonarClient:
         path: str,
         *,
         auth: tuple[str, str] | None = None,
-        params: dict | None = None,
-        data: dict | None = None,
-    ) -> dict:
+        params: dict[str, object] | None = None,
+        data: dict[str, object] | None = None,
+    ) -> dict[str, Any]:
         raw = self.request(method, path, auth=auth, params=params, data=data)
         try:
-            return json.loads(raw.decode("utf-8"))
+            loaded = json.loads(raw.decode("utf-8"))
         except json.JSONDecodeError as exc:
             raise AnalysisError(f"Invalid JSON response from {path}: {exc}") from exc
+        if not isinstance(loaded, dict):
+            raise AnalysisError(f"Invalid JSON object from {path}")
+        return cast(dict[str, Any], loaded)
 
-    def _build_url(self, path: str, params: dict | None = None) -> str:
+    def _build_url(self, path: str, params: dict[str, object] | None = None) -> str:
         base = self.host_url
         if not base.endswith("/"):
             base = f"{base}/"
@@ -214,7 +235,7 @@ class SonarClient:
 
     def _auth_headers(self, auth: tuple[str, str]) -> dict[str, str]:
         user, password = auth
-        token = b64encode(f"{user}:{password}".encode("utf-8")).decode("utf-8")
+        token = b64encode(f"{user}:{password}".encode()).decode("utf-8")
         return {"Authorization": f"Basic {token}"}
 
     @staticmethod
@@ -245,11 +266,12 @@ class SonarClient:
     @staticmethod
     def _is_retryable_url_error(exc: urllib.error.URLError) -> bool:
         reason = exc.reason
-        return isinstance(reason, (TimeoutError, socket.timeout)) or getattr(
-            reason,
-            "__class__",
-            None,
-        ).__name__ in {"TimeoutError", "ConnectionResetError", "BrokenPipeError"}
+        reason_name = reason.__class__.__name__
+        return isinstance(reason, (TimeoutError, socket.timeout)) or reason_name in {
+            "TimeoutError",
+            "ConnectionResetError",
+            "BrokenPipeError",
+        }
 
     @staticmethod
     def _format_http_error(url: str, exc: urllib.error.HTTPError) -> str:

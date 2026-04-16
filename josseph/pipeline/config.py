@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import os
+from argparse import Namespace
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import yaml
 
@@ -31,7 +34,7 @@ class AnalysisConfig:
         }
 
 
-def build_config(args) -> AnalysisConfig:
+def build_config(args: Namespace) -> AnalysisConfig:
     config_path = Path(args.config_path).expanduser().resolve()
     raw = _read_yaml(config_path)
     _reject_unsupported_fields(raw)
@@ -52,7 +55,7 @@ def build_config(args) -> AnalysisConfig:
     )
 
 
-def _read_yaml(config_path: Path) -> dict:
+def _read_yaml(config_path: Path) -> dict[str, object]:
     if not config_path.is_file():
         raise FileNotFoundError(f"Configuration file {config_path} not found")
 
@@ -67,10 +70,10 @@ def _read_yaml(config_path: Path) -> dict:
         raise ValueError(
             f"Configuration file {config_path} must contain a YAML mapping at the root"
         )
-    return loaded
+    return cast(dict[str, object], loaded)
 
 
-def _parse_repositories(raw: dict, config_path: Path) -> list[RepositorySpec]:
+def _parse_repositories(raw: Mapping[str, object], config_path: Path) -> list[RepositorySpec]:
     repositories_value = raw.get("repositories")
     if repositories_value is None:
         raise ValueError("Configuration must define 'repositories' as a path to a file")
@@ -136,7 +139,7 @@ def _parse_workers(value: object) -> int:
 def _parse_extractor_settings(value: object) -> dict[str, dict[str, object]]:
     if value is None:
         return {}
-    if not isinstance(value, dict):
+    if not isinstance(value, Mapping):
         raise ValueError("'extractor_settings' must be a mapping of extractor names to settings")
 
     parsed: dict[str, dict[str, object]] = {}
@@ -147,7 +150,7 @@ def _parse_extractor_settings(value: object) -> dict[str, dict[str, object]]:
         if raw_settings is None:
             parsed[name] = {}
             continue
-        if not isinstance(raw_settings, dict):
+        if not isinstance(raw_settings, Mapping):
             raise ValueError(
                 f"'extractor_settings.{name}' must be a mapping of setting names to values"
             )
@@ -164,6 +167,6 @@ def _parse_optional_string(value: object, field_name: str) -> str | None:
     return stripped or None
 
 
-def _reject_unsupported_fields(raw: dict[str, object]) -> None:
+def _reject_unsupported_fields(raw: Mapping[str, object]) -> None:
     if "clone_depth" in raw:
         raise ValueError("'clone_depth' is no longer supported")
