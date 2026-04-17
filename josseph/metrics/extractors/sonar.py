@@ -23,6 +23,8 @@ from josseph.providers.sonar import SonarClient
 from josseph.utils import AnalysisError
 
 EXTRACTOR_NAME = "sonar"
+DEFAULT_SONAR_ADMIN_DEFAULT_PASSWORD = "admin"
+DEFAULT_SONAR_ADMIN_PASSWORD = "Admin#Password12345"
 
 
 @dataclass(frozen=True)
@@ -244,8 +246,11 @@ def build_extractor(
     sonar_client = SonarClient(
         host_url=host_url,
         admin_user=env.get("SONAR_ADMIN_USER", "admin"),
-        admin_password=env.get("SONAR_ADMIN_PASSWORD", "admin"),
-        admin_default_password=env.get("SONAR_ADMIN_DEFAULT_PASSWORD", "admin"),
+        admin_password=env.get("SONAR_ADMIN_PASSWORD", DEFAULT_SONAR_ADMIN_PASSWORD),
+        admin_default_password=env.get(
+            "SONAR_ADMIN_DEFAULT_PASSWORD",
+            DEFAULT_SONAR_ADMIN_DEFAULT_PASSWORD,
+        ),
     )
     sonar_scanner = SonarScanner(
         command_runner=context.command_runner,

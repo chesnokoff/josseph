@@ -13,11 +13,16 @@ from josseph.metrics.extractors.ck import CkExtractor
 from josseph.metrics.extractors.cm import CmExtractor
 from josseph.metrics.extractors.github import GithubExtractor
 from josseph.metrics.extractors.sonar import (
+    DEFAULT_SONAR_ADMIN_DEFAULT_PASSWORD,
+    DEFAULT_SONAR_ADMIN_PASSWORD,
     SonarExtractor,
     SonarScanner,
     SonarScannerSettings,
     _build_sonar_project_key,
+    build_extractor,
 )
+from josseph.metrics.registry import ExtractorFactoryContext
+from josseph.providers.sonar import SonarClient
 from josseph.providers.github import GithubClient
 from josseph.utils import AnalysisError, setup_trace
 
@@ -423,3 +428,19 @@ def test_build_sonar_project_key_uses_project_and_commit_hash():
     )
 
     assert key.startswith("example_repo_deadbeefcafe_")
+
+
+def test_build_sonar_extractor_uses_bootstrap_sonar_admin_password_defaults(tmp_path):
+    extractor = build_extractor(
+        ExtractorFactoryContext(
+            third_party_path=tmp_path / "third_party",
+            env={},
+            command_runner=FakeCommandRunner(lambda *args, **kwargs: ""),
+        ),
+        settings={},
+    )
+
+    assert isinstance(extractor, SonarExtractor)
+    assert isinstance(extractor.client, SonarClient)
+    assert extractor.client.admin_default_password == DEFAULT_SONAR_ADMIN_DEFAULT_PASSWORD
+    assert extractor.client.admin_password == DEFAULT_SONAR_ADMIN_PASSWORD

@@ -162,6 +162,9 @@ the full schema.
 
 - `github` works best with `github_token` or `GITHUB_TOKEN`
 - `sonar` requires a reachable SonarQube instance
+- on a fresh local SonarQube container, keep `SONAR_ADMIN_DEFAULT_PASSWORD`
+  equal to the current admin password and set `SONAR_ADMIN_PASSWORD` to the
+  new policy-compliant password JOSSeph should use after bootstrap
 - `ck` and `cm` require their vendored JARs to exist
 
 If those prerequisites are missing, the correct expectation is failure reporting,

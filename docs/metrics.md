@@ -137,7 +137,10 @@ Without test data, `coverage` will be `0.0`.
 **Infrastructure:** SonarQube runs as a local Docker container started via
 `docker compose up -d sonarqube`. JOSSeph creates a temporary project per
 repository, scans it, reads the measures, then deletes the project. Each run
-is isolated.
+is isolated. For a fresh local container, JOSSeph first authenticates with
+`SONAR_ADMIN_DEFAULT_PASSWORD` (default: `admin`) and then switches the local
+instance to `SONAR_ADMIN_PASSWORD`, which must satisfy the active SonarQube
+password policy.
 
 **Concurrency:** SonarQube Community Edition has a single compute-engine worker.
 By default `concurrency` is `1`, which serialises scans across parallel

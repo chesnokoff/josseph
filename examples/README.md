@@ -32,7 +32,9 @@ small `.parquet` files as loadable reference artifacts.
 
 ```bash
 cp .env.example .env
-# edit .env and set GITHUB_TOKEN and SONAR_ADMIN_PASSWORD
+# edit .env and set GITHUB_TOKEN
+# keep SONAR_ADMIN_DEFAULT_PASSWORD in sync with the current local admin password
+# set SONAR_ADMIN_PASSWORD to the policy-compliant password JOSSeph should use
 
 docker compose build josseph
 docker compose up -d sonarqube

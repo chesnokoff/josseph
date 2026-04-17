@@ -48,6 +48,18 @@ docker compose build josseph
 docker compose up -d sonarqube
 ```
 
+For a fresh local SonarQube container, `docker-compose.yml` uses a two-step
+bootstrap:
+- `SONAR_ADMIN_DEFAULT_PASSWORD=admin` is the upstream factory default for a
+  new local container
+- `SONAR_ADMIN_PASSWORD=Admin#Password12345` is the policy-compliant password
+  JOSSeph sets on first run
+
+Override these values in `.env` only for your local container lifecycle. Keep
+`SONAR_ADMIN_DEFAULT_PASSWORD` aligned with the current admin password of that
+local SonarQube instance, and ensure `SONAR_ADMIN_PASSWORD` satisfies the
+current SonarQube password policy.
+
 3. Run the checked-in sample config in `configs/config.yaml`.
 
 ```yaml
