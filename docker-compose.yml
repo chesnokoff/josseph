@@ -1,7 +1,6 @@
 services:
   sonarqube:
     image: sonarqube:25.5.0.107428-community
-    container_name: sonar-server
     ports:
       - "9234:9000"
     healthcheck:
@@ -29,7 +28,7 @@ services:
       SONAR_ADMIN_USER: ${SONAR_ADMIN_USER:-admin}
       SONAR_ADMIN_DEFAULT_PASSWORD: ${SONAR_ADMIN_DEFAULT_PASSWORD:-admin}
       SONAR_ADMIN_PASSWORD: ${SONAR_ADMIN_PASSWORD:-Admin#Password12345}
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     depends_on:
       sonarqube:
         condition: service_healthy
@@ -38,4 +37,3 @@ services:
 
 networks:
   sonar:
-    name: sonar
