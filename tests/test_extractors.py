@@ -22,8 +22,8 @@ from josseph.metrics.extractors.sonar import (
     build_extractor,
 )
 from josseph.metrics.registry import ExtractorFactoryContext
-from josseph.providers.sonar import SonarClient
 from josseph.providers.github import GithubClient
+from josseph.providers.sonar import SonarClient
 from josseph.utils import AnalysisError, setup_trace
 
 setup_trace()
