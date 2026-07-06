@@ -69,7 +69,8 @@ def test_pipeline_clones_real_public_repository_and_writes_artifacts(tmp_path, m
         "josseph.pipeline.app.select_extractors",
         lambda registry, tools: {
             "github": observation_extractor,
-            "ck": checkout_extractor,
+            "checkout": checkout_extractor,
+            "ck": registry.get("ck"),
             "cm": registry.get("cm"),
         },
     )
@@ -86,8 +87,13 @@ def test_pipeline_clones_real_public_repository_and_writes_artifacts(tmp_path, m
     assert (project_dir / "cm.parquet").is_file()
     assert (project_dir / "cm.json").is_file()
 
+    assert (project_dir / "checkout.parquet").is_file()
+    assert (project_dir / "checkout.json").is_file()
+
     assert not pd.read_parquet(project_dir / "github.parquet").empty
-    assert not pd.read_parquet(project_dir / "ck.parquet").empty
+    ck_frame = pd.read_parquet(project_dir / "ck.parquet")
+    assert not ck_frame.empty
+    assert "cbo" in ck_frame.columns
 
     github_metadata = json.loads((project_dir / "github.json").read_text(encoding="utf-8"))
     ck_metadata = json.loads((project_dir / "ck.json").read_text(encoding="utf-8"))
