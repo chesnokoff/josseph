@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "josseph"
-version = "1.0.0"
+version = "1.1.0"
 description = "Docker-first reproducible pipeline for extracting metrics from GitHub Java repositories"
 readme = "README.md"
 license = { file = "LICENSE" }
