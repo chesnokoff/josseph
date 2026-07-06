@@ -263,6 +263,36 @@ def test_sonar_scanner_surfaces_command_output_on_failure(tmp_path):
     assert "stderr:\nscanner stderr" in message
 
 
+def test_sonar_scanner_redacts_token_in_failure_messages(tmp_path):
+    token = "squ_0123456789abcdef"
+
+    def fake_run_command(cmd, cwd=None, env=None, timeout=None):
+        raise subprocess.CalledProcessError(
+            returncode=3,
+            cmd=cmd,
+            output=f"launching: sonar-scanner -Dsonar.login={token}",
+            stderr=f"scan aborted, bare token {token} echoed by the JVM",
+        )
+
+    scanner = SonarScanner(
+        command_runner=FakeCommandRunner(fake_run_command),
+        settings=SonarScannerSettings.from_env({"SONAR_OPTIONS": ""}),
+    )
+
+    with pytest.raises(AnalysisError) as excinfo:
+        scanner.run(tmp_path, "example_repo", token)
+
+    message = str(excinfo.value)
+    assert token not in message
+    assert "-Dsonar.login=***" in message
+    assert "scan aborted" in message
+
+    # the chained subprocess exception must not smuggle the token either
+    cause = excinfo.value.__cause__
+    assert cause is not None
+    assert token not in str(cause)
+
+
 def test_sonar_extractor_uses_client_and_converts_measures(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(
@@ -371,7 +401,60 @@ def test_sonar_extractor_deletes_project_on_scanner_failure(tmp_path, monkeypatc
     assert ("delete_project", "example_repo_deadbeef1234_abcd1234") in calls
 
 
-def test_sonar_extractor_refuses_to_reuse_existing_project(tmp_path, monkeypatch):
+def test_sonar_client_create_project_treats_retried_already_exists_as_success():
+    client = SonarClient(
+        host_url="http://localhost:9000",
+        admin_user="admin",
+        admin_password="secret",
+        admin_default_password="admin",
+    )
+
+    def fail_already_exists(*args, **kwargs):
+        raise AnalysisError(
+            'HTTP error 400 for http://localhost:9000/api/projects/create: '
+            '{"errors":[{"msg":"Could not create Project, key already exists: k"}]}'
+        )
+
+    client.request = fail_already_exists  # type: ignore[method-assign]
+    assert client.create_project("key_deadbeef_abcd1234", "example") is True
+
+
+def test_sonar_client_create_project_does_not_claim_unrelated_create_failures():
+    client = SonarClient(
+        host_url="http://localhost:9000",
+        admin_user="admin",
+        admin_password="secret",
+        admin_default_password="admin",
+    )
+
+    def fail_other_400(*args, **kwargs):
+        raise AnalysisError(
+            'HTTP error 400 for http://localhost:9000/api/projects/create: '
+            '{"errors":[{"msg":"Could not create Project: quota exceeded"}]}'
+        )
+
+    client.request = fail_other_400  # type: ignore[method-assign]
+    with pytest.raises(AnalysisError, match="quota exceeded"):
+        client.create_project("key_deadbeef_abcd1234", "example")
+
+
+def test_sonar_client_create_project_propagates_other_errors():
+    client = SonarClient(
+        host_url="http://localhost:9000",
+        admin_user="admin",
+        admin_password="secret",
+        admin_default_password="admin",
+    )
+
+    def fail_forbidden(*args, **kwargs):
+        raise AnalysisError("HTTP error 403 for http://localhost:9000/api/projects/create")
+
+    client.request = fail_forbidden  # type: ignore[method-assign]
+    with pytest.raises(AnalysisError, match="403"):
+        client.create_project("key_deadbeef_abcd1234", "example")
+
+
+def test_sonar_extractor_owns_and_cleans_up_project_after_retried_create(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(
         "josseph.metrics.extractors.sonar._build_sonar_project_key",
@@ -387,7 +470,9 @@ def test_sonar_extractor_refuses_to_reuse_existing_project(tmp_path, monkeypatch
 
         def create_project(self, project_key, project_name):
             calls.append(("create_project", project_key, project_name))
-            return False
+            # provider contract: True both for fresh creates and for
+            # "already exists" reported after a retried POST
+            return True
 
         def generate_token(self):
             calls.append(("generate_token",))
@@ -411,11 +496,11 @@ def test_sonar_extractor_refuses_to_reuse_existing_project(tmp_path, monkeypatch
         ),
     )
 
-    with pytest.raises(AnalysisError, match="Refusing to reuse pre-existing SonarQube project"):
-        extractor.run(make_target(checkout_path=tmp_path))
+    rows = extractor.run(make_target(checkout_path=tmp_path))
 
-    assert ("generate_token",) not in calls
-    assert ("delete_project", "example_repo_deadbeef1234_abcd1234") not in calls
+    assert rows == [{}]
+    assert ("generate_token",) in calls
+    assert ("delete_project", "example_repo_deadbeef1234_abcd1234") in calls
 
 
 def test_build_sonar_project_key_uses_project_and_commit_hash():

@@ -26,6 +26,30 @@ EXTRACTOR_NAME = "sonar"
 DEFAULT_SONAR_ADMIN_DEFAULT_PASSWORD = "admin"
 DEFAULT_SONAR_ADMIN_PASSWORD = "Admin#Password12345"
 
+_SONAR_LOGIN_PATTERN = re.compile(r"(sonar\.login=)\S+")
+
+
+def _redact_token_text(text: str, token: str | None) -> str:
+    """Mask the sonar token (flag form and literal value) so it never
+    reaches logs or run reports."""
+    redacted = _SONAR_LOGIN_PATTERN.sub(r"\1***", text)
+    if token:
+        redacted = redacted.replace(token, "***")
+    return redacted
+
+
+def _redact_exception_token(exc: BaseException, token: str) -> None:
+    """Scrub the token from a chained subprocess exception (its command and
+    captured streams survive in ``__cause__`` and would leak via any future
+    ``log.exception``/traceback)."""
+    cmd = getattr(exc, "cmd", None)
+    if cmd:
+        exc.cmd = tuple(str(part).replace(token, "***") for part in cmd)  # type: ignore[attr-defined]
+    for attr in ("output", "stderr"):
+        value = getattr(exc, attr, None)
+        if isinstance(value, str) and token in value:
+            setattr(exc, attr, value.replace(token, "***"))
+
 
 @dataclass(frozen=True)
 class SonarScannerSettings:
@@ -87,25 +111,31 @@ class SonarScanner:
                 env=self._settings.environment,
                 cwd=repo_path,
             )
-        except AnalysisError:
-            raise
+        except AnalysisError as exc:
+            raise AnalysisError(_redact_token_text(str(exc), token)) from None
         except (
             CommandExecutionError,
             subprocess.CalledProcessError,
             subprocess.TimeoutExpired,
         ) as exc:
+            _redact_exception_token(exc, token)
             raise AnalysisError(
-                describe_command_failure("sonar-scanner", scanner_command, exc)
+                _redact_token_text(
+                    describe_command_failure("sonar-scanner", scanner_command, exc),
+                    token,
+                )
             ) from exc
         except Exception as exc:
-            raise AnalysisError(f"sonar-scanner failed: {exc}") from exc
+            raise AnalysisError(
+                _redact_token_text(f"sonar-scanner failed: {exc}", token)
+            ) from exc
 
         if output:
             self.log.log(
                 5,
                 "sonar-scanner output for %s:\n%s",
                 repo_path,
-                clean_command_stream(output).strip(),
+                _redact_token_text(clean_command_stream(output).strip(), token),
             )
 
 
@@ -157,6 +187,7 @@ class SonarExtractor(MetricExtractor):
         repo_path = _require_checkout(target)
         sonar_project_key = _build_sonar_project_key(target)
         created_project = False
+        token: str | None = None
 
         try:
             self.client.wait_for_status("UP", timeout=180)
@@ -165,17 +196,14 @@ class SonarExtractor(MetricExtractor):
                 sonar_project_key,
                 target.project_name,
             )
-            if not created_project:
-                raise AnalysisError(
-                    f"Refusing to reuse pre-existing SonarQube project {sonar_project_key} "
-                    f"for {target.project_name}."
-                )
             token = self.client.generate_token()
             self._scanner.run(repo_path, sonar_project_key, token)
             self.client.wait_for_analysis(sonar_project_key)
             metrics = self.client.fetch_metrics(sonar_project_key)
         except Exception as exc:
-            raise AnalysisError(f"Sonar scan failed for {repo_path}: {exc}") from exc
+            raise AnalysisError(
+                _redact_token_text(f"Sonar scan failed for {repo_path}: {exc}", token)
+            ) from exc
         finally:
             if created_project:
                 try:

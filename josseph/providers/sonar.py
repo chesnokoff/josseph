@@ -69,6 +69,14 @@ class SonarClient:
             raise
 
     def create_project(self, project_key: str, project_name: str) -> bool:
+        """Create the project, treating "already exists" as success.
+
+        Project keys carry a per-run uuid4 suffix, so a pre-existing project
+        with the same key can only be the result of our own create request
+        whose response was lost and retried (e.g. a 502 returned after the
+        server-side create succeeded). Claiming ownership keeps the retried
+        POST idempotent and guarantees the project is cleaned up afterwards.
+        """
         try:
             self.request(
                 "POST",
@@ -76,12 +84,15 @@ class SonarClient:
                 auth=(self.admin_user, self.admin_password),
                 params={"name": project_name, "project": project_key},
             )
-            return True
         except AnalysisError as exc:
             if self._project_already_exists(exc):
-                self.log.debug("SonarQube project %s already exists.", project_key)
-                return False
+                self.log.debug(
+                    "SonarQube project %s already exists; treating retried create as success.",
+                    project_key,
+                )
+                return True
             raise
+        return True
 
     def generate_token(self) -> str:
         response = self.request_json(
@@ -249,8 +260,10 @@ class SonarClient:
 
     @staticmethod
     def _project_already_exists(exc: AnalysisError) -> bool:
-        message = str(exc).lower()
-        return "already exists" in message or "could not create project" in message
+        # Match only the specific "key already exists" wording: broader
+        # substrings (e.g. "could not create project") would wrongly claim
+        # ownership on unrelated creation failures.
+        return "already exists" in str(exc).lower()
 
     @staticmethod
     def _should_retry_http_error(exc: urllib.error.HTTPError) -> bool:
