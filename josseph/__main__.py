@@ -3,7 +3,7 @@ import logging
 import sys
 
 from josseph.pipeline.app import RepositoryAnalysisPipeline
-from josseph.utils import CONFIGS_DIR
+from josseph.utils import CONFIGS_DIR, AnalysisError
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,7 +39,7 @@ def main() -> int:
 """)
     try:
         return RepositoryAnalysisPipeline().run(args)
-    except (FileNotFoundError, ValueError) as exc:
+    except (AnalysisError, FileNotFoundError, ValueError) as exc:
         logger = logging.getLogger("josseph.__main__")
         if logger.hasHandlers():
             logger.exception("Startup failed: %s", exc)

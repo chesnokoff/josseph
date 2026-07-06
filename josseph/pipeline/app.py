@@ -14,7 +14,13 @@ from josseph.pipeline.results import ResultDirectoryManager, ResultWriter
 from josseph.pipeline.run_report import RunReportCollector
 from josseph.pipeline.runner import AnalysisRunner
 from josseph.process import SubprocessCommandRunner
-from josseph.utils import PROJECTS_DIR, RESULTS_DIR, THIRD_PARTY_DIR, setup_logging
+from josseph.utils import (
+    PROJECTS_DIR,
+    RESULTS_DIR,
+    THIRD_PARTY_DIR,
+    AnalysisError,
+    setup_logging,
+)
 
 
 class RepositoryAnalysisPipeline:
@@ -55,7 +61,7 @@ class RepositoryAnalysisPipeline:
                     extractor_settings=config.extractor_settings,
                 )
                 extractors = select_extractors(registry, config.tools)
-            except (FileNotFoundError, ValueError):
+            except (AnalysisError, FileNotFoundError, ValueError):
                 self.log.exception("Failed to prepare pipeline runtime")
                 exit_code = 2
                 return 2

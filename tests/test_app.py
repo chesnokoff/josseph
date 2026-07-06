@@ -127,6 +127,23 @@ def test_pipeline_fails_on_invalid_config(tmp_path, monkeypatch):
     assert not (results_dir / "runs").exists()
 
 
+def test_pipeline_returns_invalid_input_exit_code_when_tool_jar_is_missing(tmp_path, monkeypatch):
+    results_dir = tmp_path / "results"
+    empty_third_party = tmp_path / "third_party"
+    empty_third_party.mkdir()
+    monkeypatch.setattr("josseph.pipeline.app.RESULTS_DIR", results_dir)
+    monkeypatch.setattr("josseph.pipeline.app.PROJECTS_DIR", tmp_path / "projects")
+    monkeypatch.setattr("josseph.pipeline.app.THIRD_PARTY_DIR", empty_third_party)
+    monkeypatch.setattr("josseph.pipeline.app.setup_logging", lambda: None)
+
+    exit_code = RepositoryAnalysisPipeline().run(write_config(tmp_path, tools=["ck"]))
+
+    assert exit_code == 2
+    summary = json.loads(latest_summary(results_dir).read_text(encoding="utf-8"))
+    assert summary["status"] == "failed"
+    assert summary["exit_code"] == 2
+
+
 def test_pipeline_writes_failed_summary_when_runtime_preparation_fails(tmp_path, monkeypatch):
     results_dir = tmp_path / "results"
     monkeypatch.setattr("josseph.pipeline.app.RESULTS_DIR", results_dir)
