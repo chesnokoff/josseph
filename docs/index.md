@@ -20,6 +20,7 @@ reproducible contract:
 - output is a predictable directory tree under `results/`
 - every partial failure is supposed to end up in `summary.json`
 - a cached result is reused only when both `<tool>.parquet` and `<tool>.json` exist
+  (and, for revision-bound extractors with a pinned commit, the recorded commit hash matches)
 
 ## What a run produces
 

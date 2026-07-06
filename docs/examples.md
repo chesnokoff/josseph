@@ -129,7 +129,8 @@ Relevant `summary.json` fragment:
 
 ## Example 3: Mixed checkout-free and checkout-based extractors
 
-Config excerpt, matching `configs/20-small.yaml`:
+Config excerpt (a `configs/20-small.yaml` variation without `sonar`, with an
+explicit CM timeout):
 
 ```yaml
 repositories: repositories/20-small-repos.yaml

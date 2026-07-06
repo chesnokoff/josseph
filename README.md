@@ -86,7 +86,7 @@ Supported keys:
 - `extractor_settings`: optional mapping of extractor name to extractor-specific settings
 - `workers`: optional positive integer; omitted means CPU count
 - `github_token`: optional token value; if omitted, `GITHUB_TOKEN` from the environment is used
-- `repositories`: path to a text or YAML file with repository entries; YAML entries may include an optional `commit`
+- `repositories`: path to a YAML file whose root is a sequence of repository entries; entries may include an optional `commit`
 
 Path in `repositories` is resolved relative to the YAML file.
 Pinned commits are only supported when they are reachable from the repository's
@@ -134,7 +134,7 @@ docker compose down
 - Analysis helpers and operational scripts may live outside the repo in a sibling tools directory.
 - `GITHUB_TOKEN` is passed from host environment into `josseph` via `docker-compose.yml`.
 - `sonar` analysis may be slower on large repositories.
-- Sonar Scanner is vendored in `third_party/sonar-scanner` at a fixed version (`7.0.2.4839`).
+- Sonar Scanner is downloaded from the official SonarSource CDN at Docker build time, pinned to version `7.0.2.4839` (see `third_party/sonar-scanner/README.md`).
 
 ## Reproducibility Contract
 - Runtime dependencies are pinned in `requirements.txt`.
@@ -143,14 +143,17 @@ docker compose down
   - `0`: all repositories processed without top-level failures
   - `1`: one or more repositories failed during analysis
   - `2`: invalid user input/configuration (for example, unknown tool)
-- Cached results are reused only when both `<tool>.parquet` and `<tool>.json` are present.
+- Cached results are reused only when both `<tool>.parquet` and `<tool>.json` are present;
+  for revision-bound extractors with a pinned commit, the `commit_hash` recorded in
+  `<tool>.json` must also match the requested commit.
 - `observation-bound` extractors are still cacheable by file presence; use
   `--force` to recollect them.
 
 ## Third-Party Licenses
 
-JOSSeph vendors the following tools. All licenses are compatible with the
-project's MIT license.
+JOSSeph relies on the following third-party tools (CK and CM are vendored;
+Sonar Scanner is downloaded at image build time; SonarQube runs as a Docker
+service). All licenses are compatible with the project's MIT license.
 
 | Tool | Version | License | Source |
 |------|---------|---------|--------|

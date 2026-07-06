@@ -77,10 +77,12 @@ A cached result is valid only when **both** files are present:
 - `results/<owner>@<repo>/<tool>.json`
 
 If only one exists, the extractor reruns. This prevents partial writes from
-being silently treated as complete.
+being silently treated as complete. For revision-bound extractors with a
+pinned commit, the `commit_hash` recorded in `<tool>.json` must additionally
+match the requested commit, so changing a pinned commit invalidates the cache.
 
-`observation-bound` extractors use the same cache contract; the distinction is
-documented for reproducibility, not for automatic cache invalidation.
+`observation-bound` extractors are cached by file presence only; the binding
+distinction is documented for reproducibility.
 
 ### Extractor isolation
 
@@ -122,6 +124,7 @@ No registration step is required.
   drop non-Java code.
 - Single host: SonarQube runs on the same Docker network as the pipeline.
   There is no multi-host or cloud SonarQube support.
-- Cache staleness: cached results are reused based on file presence, not
-  content fingerprint. If you change configs, tool versions, or pinned commits,
-  clear `results/` or use `--force`.
+- Cache staleness: cached results are validated by artifact presence and, for
+  revision-bound extractors with a pinned commit, by the recorded commit hash —
+  not by content fingerprint. If you change tool versions or extractor
+  settings, clear `results/` or use `--force`.

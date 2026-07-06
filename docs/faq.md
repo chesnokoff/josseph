@@ -73,21 +73,35 @@ If you save that config under `configs/`, the repository path resolves to
 2. `results/runs/<run-id>/summary.json`
 3. expected `<tool>.parquet` and `<tool>.json` pairs for each repository
 
+## How do I build a repository list?
+
+Repository selection is out of JOSSeph's scope by design. Use a dedicated
+sampling tool such as [SEART GitHub Search](https://seart-ghs.si.usi.ch)
+to filter GitHub projects by language, stars, activity, and other criteria,
+then convert its JSON export into a JOSSeph repository list:
+
+```bash
+jq -r '.items[].name | "- " + .' results.json > repos.yaml
+```
+
+The resulting `owner/name` entries are accepted as-is.
+
 ## How does caching work, and when should I clear results?
 
 JOSSeph reuses a cached result whenever **both** `<tool>.parquet` and
-`<tool>.json` exist for a given repository and tool. There is no content
-fingerprint — the cache check is presence-only.
+`<tool>.json` exist for a given repository and tool. For revision-bound
+extractors with a pinned commit, the `commit_hash` recorded in `<tool>.json`
+must additionally match the requested commit — pinning a different commit
+therefore triggers a re-run automatically. There is no content fingerprint
+beyond that.
 
-`observation-bound` extractors follow the same cache rule.
+`observation-bound` extractors are cached by file presence only.
 
 This means stale results can accumulate if you:
 
-- change your config (e.g. change requested commits, add tools)
+- change your config in ways the cache cannot see (e.g. add extractor settings)
 - update a tool version (CK, CM, SonarQube, Sonar Scanner)
 - repoint a repository list to different repos with the same project name
-- pin a different commit for the same repository, because artifacts are stored
-  per repository directory rather than per revision
 
 **To force a full re-run, use `--force`:**
 

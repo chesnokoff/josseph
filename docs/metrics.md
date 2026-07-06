@@ -87,6 +87,7 @@ The `github` extractor calls the GitHub API to collect project-level metadata:
 | description | Repository description |
 | default_branch | Default branch name |
 | created_at | Repository creation timestamp |
+| updated_at | Last metadata update timestamp |
 | pushed_at | Last push timestamp |
 | language | Primary language reported by GitHub |
 | license | SPDX license identifier |
