@@ -21,7 +21,7 @@ Container-first pipeline for collecting repository metrics with:
 
 ## Prerequisites
 - Docker Desktop / Docker Engine with Compose
-- A GitHub token in shell environment (recommended):
+- A GitHub token is needed only when using the `github` extractor:
 
 ```bash
 export GITHUB_TOKEN=your_token_here
@@ -36,16 +36,36 @@ sudo sysctl -w vm.max_map_count=524288
 To make it persistent across reboots, add `vm.max_map_count=524288` to `/etc/sysctl.conf`. This is not required on macOS or Windows (Docker Desktop handles it automatically).
 
 ## Quick Start
-1. Build the app image:
+The checked-in quick-start config runs CK and CM on a pinned revision of
+`junit-team/junit4`. It does not need a GitHub token or SonarQube:
 
 ```bash
-docker compose build josseph
+docker compose run --rm --build --no-deps josseph configs/quickstart.yaml
 ```
 
-2. Start SonarQube:
+The config is intentionally small and explicit:
+
+```yaml
+tools:
+  - ck
+  - cm
+workers: 1
+repositories: repositories/quickstart.yaml
+```
+
+On success, `results/junit-team@junit4/` contains paired `.parquet` and `.json`
+artifacts for both tools, and `results/runs/<run-id>/summary.json` reports
+`"status": "success"`. See the checked-in [sample run](examples/sample-run/).
+
+### Full run
+
+The default config runs all four extractors. Copy the environment template,
+set `GITHUB_TOKEN`, and run it; Compose builds the image and starts SonarQube:
 
 ```bash
-docker compose up -d sonarqube
+cp .env.example .env
+# Edit GITHUB_TOKEN in .env, then:
+docker compose run --rm --build josseph configs/config.yaml
 ```
 
 For a fresh local SonarQube container, `docker-compose.yml` uses a two-step
@@ -60,7 +80,7 @@ Override these values in `.env` only for your local container lifecycle. Keep
 local SonarQube instance, and ensure `SONAR_ADMIN_PASSWORD` satisfies the
 current SonarQube password policy.
 
-3. Run the checked-in sample config in `configs/config.yaml`.
+The checked-in full config is `configs/config.yaml`:
 
 ```yaml
 tools:
@@ -70,12 +90,6 @@ tools:
   - sonar
 workers: 1
 repositories: repositories/one-repo.yaml
-```
-
-4. Run the pipeline against that config:
-
-```bash
-docker compose run --rm josseph configs/config.yaml
 ```
 
 ## Configuration Format

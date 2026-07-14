@@ -1,0 +1,6 @@
+# Fast first run: real code and change metrics without credentials or SonarQube.
+tools:
+  - ck
+  - cm
+workers: 1
+repositories: repositories/quickstart.yaml

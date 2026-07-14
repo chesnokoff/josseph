@@ -7,6 +7,25 @@ import pytest
 
 from josseph.domain.repository import RepositorySpec
 from josseph.pipeline.config import build_config
+from josseph.utils import CONFIGS_DIR
+
+
+def test_checked_in_quickstart_config_runs_ck_and_cm_on_pinned_junit4(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    config = build_config(Namespace(config_path=str(CONFIGS_DIR / "quickstart.yaml")))
+
+    assert config.tools == ["ck", "cm"]
+    assert config.workers == 1
+    assert config.github_token is None
+    assert config.repositories == [
+        RepositorySpec.from_url(
+            "https://github.com/junit-team/junit4.git",
+            requested_commit_hash="300468b1efd48d76fac2f7bd6d576846dcbbf5ed",
+        )
+    ]
 
 
 def test_build_config_reads_yaml_and_resolves_repositories(tmp_path, monkeypatch):

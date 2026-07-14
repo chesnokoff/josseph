@@ -1,75 +1,56 @@
 # Examples
 
-This directory contains reference outputs from real JOSSeph runs:
-- `GregorStocks@mage-bench`: a minimal example with committed `github.json` and `ck.json`
-- `doocs@advanced-java`: a fuller multi-extractor example with committed `github`, `ck`, `cm`, and `sonar` outputs in both `.json` and `.parquet` formats
+This directory contains reference output from the real quickstart run on the
+pinned `junit-team/junit4` revision. It includes only the CK and CM extractors,
+so it needs neither credentials nor SonarQube.
 
 ## Directory tree
 
-```
+```text
 examples/sample-run/
-  GregorStocks@mage-bench/
-    github.json          — metadata for github extractor
-    ck.json              — metadata for ck extractor
-  doocs@advanced-java/
-    github.json          — metadata for github extractor
-    github.parquet       — github metrics table
-    ck.json              — metadata for ck extractor
-    ck.parquet           — CK class/method metrics table
-    cm.json              — metadata for change metrics extractor
-    cm.parquet           — change metrics table
-    sonar.json           — metadata for SonarQube extractor
-    sonar.parquet        — SonarQube metrics table
+  junit-team@junit4/
+    ck.json              — CK metadata
+    ck.parquet           — CK class/method metrics
+    cm.json              — change-metrics metadata
+    cm.parquet           — change metrics
   runs/
-    20260328T120000Z/
-      summary.json       — pipeline-level run summary
+    20260714T212422Z/
+      summary.json       — successful pipeline run summary
 ```
 
-Some examples include only `.json` sidecars, while others intentionally include
-small `.parquet` files as loadable reference artifacts.
+Each extractor has the complete `.parquet` + `.json` artifact pair required by
+the result contract.
 
 ## How to reproduce
 
 ```bash
-cp .env.example .env
-# edit .env and set GITHUB_TOKEN
-# keep SONAR_ADMIN_DEFAULT_PASSWORD in sync with the current local admin password
-# set SONAR_ADMIN_PASSWORD to the policy-compliant password JOSSeph should use
-
-docker compose build josseph
-docker compose up -d sonarqube
-docker compose run --rm josseph configs/one-repo.yaml
+docker compose run --rm --build --no-deps josseph configs/quickstart.yaml
 ```
 
-Results appear under `results/<owner>@<repo>/`.
+Results appear under `results/junit-team@junit4/`, with the run summary under
+`results/runs/<run-id>/summary.json`.
 
 ## How to load parquet outputs in Python
 
 ```python
 import pandas as pd
 
-# Load CK class-level metrics
-ck = pd.read_parquet("examples/sample-run/doocs@advanced-java/ck.parquet")
-print(ck.columns.tolist())
-print(ck.head())
+root = "examples/sample-run/junit-team@junit4"
+ck = pd.read_parquet(f"{root}/ck.parquet")
+cm = pd.read_parquet(f"{root}/cm.parquet")
 
-# Load GitHub metadata
-gh = pd.read_parquet("examples/sample-run/doocs@advanced-java/github.parquet")
-print(gh)
+print(ck[["file", "class", "wmc", "cbo"]].head())
+print(cm[["file", "revisions", "authors"]].head())
 ```
 
 ## How to join metrics across extractors
 
 ```python
-import pandas as pd
+combined = ck.merge(
+    cm[["file", "revisions", "authors"]],
+    on="file",
+    how="left",
+)
 
-ck = pd.read_parquet("examples/sample-run/doocs@advanced-java/ck.parquet")
-gh = pd.read_parquet("examples/sample-run/doocs@advanced-java/github.parquet")
-
-# Add repository-level context to all class rows
-gh_row = gh.iloc[0]
-ck["repo_stars"] = gh_row["stargazers_count"]
-ck["repo_forks"] = gh_row["forks_count"]
-
-print(ck[["file", "class", "wmc", "cbo", "repo_stars"]].head(10))
+print(combined[["file", "class", "wmc", "revisions", "authors"]].head(10))
 ```

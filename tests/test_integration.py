@@ -12,6 +12,7 @@ from josseph.pipeline.app import RepositoryAnalysisPipeline
 from josseph.utils import THIRD_PARTY_DIR
 
 REAL_REPOSITORY = "https://github.com/junit-team/junit4.git"
+REAL_COMMIT = "300468b1efd48d76fac2f7bd6d576846dcbbf5ed"
 
 
 class ObservationExtractor:
@@ -35,7 +36,10 @@ class CheckoutExtractor:
 
 def _write_config(tmp_path) -> Namespace:
     repos_file = tmp_path / "repos.yaml"
-    repos_file.write_text(f"- {REAL_REPOSITORY}\n", encoding="utf-8")
+    repos_file.write_text(
+        f"- url: {REAL_REPOSITORY}\n  commit: {REAL_COMMIT}\n",
+        encoding="utf-8",
+    )
 
     config_file = tmp_path / "config.yaml"
     config_file.write_text(
@@ -112,6 +116,11 @@ def test_pipeline_clones_real_public_repository_and_writes_artifacts(
     assert "commit_hash" in github_metadata
     assert "commit_hash" in ck_metadata
     assert "commit_hash" in cm_metadata
+    assert github_metadata["requested_commit_hash"] == REAL_COMMIT
+    assert ck_metadata["requested_commit_hash"] == REAL_COMMIT
+    assert cm_metadata["requested_commit_hash"] == REAL_COMMIT
+    assert ck_metadata["commit_hash"] == REAL_COMMIT
+    assert cm_metadata["commit_hash"] == REAL_COMMIT
 
     runs_dir = results_dir / "runs"
     assert runs_dir.is_dir()

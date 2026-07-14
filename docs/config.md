@@ -83,11 +83,14 @@ extractor_settings:
   cm:
     timeout_seconds: 1800
   sonar:
-    host_url: http://localhost:9234
+    host_url: http://sonarqube:9000
     include_frontend: false
     concurrency: 1
     options: -Dsonar.sources=.
 ```
+
+`http://sonarqube:9000` is the address inside Docker Compose. Use
+`http://localhost:9234` only when running JOSSeph directly on the host.
 
 This is a contract, not a suggestion:
 

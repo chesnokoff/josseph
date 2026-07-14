@@ -2,6 +2,19 @@
 
 This page gets you from an empty workspace to a run you can verify.
 
+## Quickstart
+
+Run the checked-in CK + CM example on a pinned revision of
+`junit-team/junit4`. It needs neither credentials nor SonarQube:
+
+```bash
+docker compose run --rm --build --no-deps josseph configs/quickstart.yaml
+```
+
+The config is visible at `configs/quickstart.yaml`, its repository list is at
+`configs/repositories/quickstart.yaml`, and a successful output is checked in
+under `examples/sample-run/`.
+
 ## 1. Create the repository list
 
 The repository file is a YAML sequence. Each entry is either a plain URL string
@@ -38,6 +51,8 @@ tools:
 workers: 2
 ```
 
+Save this example as `configs/my-run.yaml`.
+
 Because this config lives under `configs/`, that repository path resolves to
 `configs/repositories/one-repo.yaml`.
 
@@ -63,14 +78,14 @@ This is not needed on macOS or Windows (Docker Desktop handles it).
 Then run the pipeline:
 
 ```bash
-docker compose run --rm josseph configs/config.yaml
+docker compose run --rm --build --no-deps josseph configs/my-run.yaml
 ```
 
 You can run the module directly for development or debugging, but that is a
 fallback path, not the primary operating model:
 
 ```bash
-python -m josseph configs/config.yaml
+python -m josseph configs/my-run.yaml
 ```
 
 ## 4. Verify artifacts, not just console output
