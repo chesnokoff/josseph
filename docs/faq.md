@@ -86,6 +86,16 @@ jq -r '.items[].name | "- " + .' results.json > repos.yaml
 
 The resulting `owner/name` entries are accepted as-is.
 
+## How do I get CSV instead of Parquet?
+
+Results are Parquet only; convert any artifact in one call:
+
+```python
+import pandas as pd
+
+pd.read_parquet("results/owner@repo/ck.parquet").to_csv("ck.csv", index=False)
+```
+
 ## How does caching work, and when should I clear results?
 
 JOSSeph reuses a cached result whenever **both** `<tool>.parquet` and
