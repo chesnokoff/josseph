@@ -39,16 +39,27 @@ def _redact_token_text(text: str, token: str | None) -> str:
 
 
 def _redact_exception_token(exc: BaseException, token: str) -> None:
-    """Scrub the token from a chained subprocess exception (its command and
-    captured streams survive in ``__cause__`` and would leak via any future
-    ``log.exception``/traceback)."""
-    cmd = getattr(exc, "cmd", None)
-    if cmd:
-        exc.cmd = tuple(str(part).replace(token, "***") for part in cmd)  # type: ignore[attr-defined]
-    for attr in ("output", "stderr"):
-        value = getattr(exc, attr, None)
-        if isinstance(value, str) and token in value:
-            setattr(exc, attr, value.replace(token, "***"))
+    """Scrub the token from a subprocess exception and its whole cause chain.
+
+    ``SubprocessCommandRunner`` raises ``CommandExecutionError`` from the
+    original ``CalledProcessError``/``TimeoutExpired``, so the raw command and
+    captured streams also survive in ``__cause__``/``__context__`` and would
+    leak through any formatted traceback or future ``log.exception``.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        cmd = getattr(current, "cmd", None)
+        if cmd:
+            current.cmd = tuple(  # type: ignore[attr-defined]
+                str(part).replace(token, "***") for part in cmd
+            )
+        for attr in ("output", "stderr"):
+            value = getattr(current, attr, None)
+            if isinstance(value, str) and token in value:
+                setattr(current, attr, value.replace(token, "***"))
+        current = current.__cause__ or current.__context__
 
 
 @dataclass(frozen=True)

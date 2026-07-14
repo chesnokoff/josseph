@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import subprocess
+import traceback
 from io import BytesIO
 from pathlib import Path
 from urllib.error import HTTPError
@@ -22,6 +23,7 @@ from josseph.metrics.extractors.sonar import (
     build_extractor,
 )
 from josseph.metrics.registry import ExtractorFactoryContext
+from josseph.process import CommandExecutionError
 from josseph.providers.github import GithubClient
 from josseph.providers.sonar import SonarClient
 from josseph.utils import AnalysisError, setup_trace
@@ -263,16 +265,32 @@ def test_sonar_scanner_surfaces_command_output_on_failure(tmp_path):
     assert "stderr:\nscanner stderr" in message
 
 
-def test_sonar_scanner_redacts_token_in_failure_messages(tmp_path):
+def test_sonar_scanner_redacts_token_through_the_cause_chain(tmp_path: Path) -> None:
     token = "squ_0123456789abcdef"
 
-    def fake_run_command(cmd, cwd=None, env=None, timeout=None):
-        raise subprocess.CalledProcessError(
-            returncode=3,
-            cmd=cmd,
-            output=f"launching: sonar-scanner -Dsonar.login={token}",
-            stderr=f"scan aborted, bare token {token} echoed by the JVM",
-        )
+    def fake_run_command(
+        cmd: tuple[str, ...],
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> str:
+        # mimic SubprocessCommandRunner: CommandExecutionError is raised
+        # from the original CalledProcessError, so the raw token survives
+        # one level deeper in __cause__
+        try:
+            raise subprocess.CalledProcessError(
+                returncode=3,
+                cmd=cmd,
+                output=f"launching: sonar-scanner -Dsonar.login={token}",
+                stderr=f"scan aborted, bare token {token} echoed by the JVM",
+            )
+        except subprocess.CalledProcessError as exc:
+            raise CommandExecutionError(
+                exc.returncode,
+                exc.cmd,
+                output=exc.output,
+                stderr=exc.stderr,
+            ) from exc
 
     scanner = SonarScanner(
         command_runner=FakeCommandRunner(fake_run_command),
@@ -287,10 +305,10 @@ def test_sonar_scanner_redacts_token_in_failure_messages(tmp_path):
     assert "-Dsonar.login=***" in message
     assert "scan aborted" in message
 
-    # the chained subprocess exception must not smuggle the token either
-    cause = excinfo.value.__cause__
-    assert cause is not None
-    assert token not in str(cause)
+    # the fully rendered traceback walks __cause__/__context__; the token
+    # must not appear anywhere in the chain
+    rendered = "".join(traceback.format_exception(excinfo.value))
+    assert token not in rendered
 
 
 def test_sonar_extractor_uses_client_and_converts_measures(tmp_path, monkeypatch):
