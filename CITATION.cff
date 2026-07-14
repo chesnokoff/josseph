@@ -2,7 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 title: "JOSSeph: A Docker-first pipeline for extracting metrics from Java open-source repositories"
 version: 1.1.0
-date-released: "2026-04-02"
+date-released: "2026-04-18"
+doi: 10.5281/zenodo.19559305
 license: MIT
 repository-code: "https://github.com/chesnokoff/josseph"
 abstract: >
