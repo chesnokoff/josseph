@@ -203,10 +203,8 @@ class SonarExtractor(MetricExtractor):
         try:
             self.client.wait_for_status("UP", timeout=180)
             self.client.ensure_admin_password()
-            created_project = self.client.create_project(
-                sonar_project_key,
-                target.project_name,
-            )
+            self.client.ensure_project(sonar_project_key, target.project_name)
+            created_project = True
             token = self.client.generate_token()
             self._scanner.run(repo_path, sonar_project_key, token)
             self.client.wait_for_analysis(sonar_project_key)

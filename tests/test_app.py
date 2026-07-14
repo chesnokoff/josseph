@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 from argparse import Namespace
+from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from josseph.pipeline.app import RepositoryAnalysisPipeline
 from josseph.utils import AnalysisError
@@ -127,7 +129,10 @@ def test_pipeline_fails_on_invalid_config(tmp_path, monkeypatch):
     assert not (results_dir / "runs").exists()
 
 
-def test_pipeline_returns_invalid_input_exit_code_when_tool_jar_is_missing(tmp_path, monkeypatch):
+def test_pipeline_returns_invalid_input_exit_code_when_tool_jar_is_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     results_dir = tmp_path / "results"
     empty_third_party = tmp_path / "third_party"
     empty_third_party.mkdir()

@@ -325,9 +325,8 @@ def test_sonar_extractor_uses_client_and_converts_measures(tmp_path, monkeypatch
         def ensure_admin_password(self):
             calls.append(("ensure_admin_password",))
 
-        def create_project(self, project_key, project_name):
-            calls.append(("create_project", project_key, project_name))
-            return True
+        def ensure_project(self, project_key, project_name):
+            calls.append(("ensure_project", project_key, project_name))
 
         def generate_token(self):
             calls.append(("generate_token",))
@@ -366,7 +365,7 @@ def test_sonar_extractor_uses_client_and_converts_measures(tmp_path, monkeypatch
 
     assert rows == [{"bugs": "1", "coverage": "80.5"}]
     assert (
-        "create_project",
+        "ensure_project",
         "example_repo_deadbeef1234_abcd1234",
         "example@repo",
     ) in calls
@@ -389,9 +388,8 @@ def test_sonar_extractor_deletes_project_on_scanner_failure(tmp_path, monkeypatc
         def ensure_admin_password(self):
             calls.append(("ensure_admin_password",))
 
-        def create_project(self, project_key, project_name):
-            calls.append(("create_project", project_key, project_name))
-            return True
+        def ensure_project(self, project_key, project_name):
+            calls.append(("ensure_project", project_key, project_name))
 
         def generate_token(self):
             calls.append(("generate_token",))
@@ -419,7 +417,7 @@ def test_sonar_extractor_deletes_project_on_scanner_failure(tmp_path, monkeypatc
     assert ("delete_project", "example_repo_deadbeef1234_abcd1234") in calls
 
 
-def test_sonar_client_create_project_treats_retried_already_exists_as_success():
+def make_sonar_client_failing_with(message: str) -> SonarClient:
     client = SonarClient(
         host_url="http://localhost:9000",
         admin_user="admin",
@@ -427,83 +425,72 @@ def test_sonar_client_create_project_treats_retried_already_exists_as_success():
         admin_default_password="admin",
     )
 
-    def fail_already_exists(*args, **kwargs):
-        raise AnalysisError(
-            'HTTP error 400 for http://localhost:9000/api/projects/create: '
-            '{"errors":[{"msg":"Could not create Project, key already exists: k"}]}'
-        )
+    def failing_request(*args: object, **kwargs: object) -> bytes:
+        raise AnalysisError(message)
 
-    client.request = fail_already_exists  # type: ignore[method-assign]
-    assert client.create_project("key_deadbeef_abcd1234", "example") is True
+    client.request = failing_request  # type: ignore[method-assign]
+    return client
 
 
-def test_sonar_client_create_project_does_not_claim_unrelated_create_failures():
-    client = SonarClient(
-        host_url="http://localhost:9000",
-        admin_user="admin",
-        admin_password="secret",
-        admin_default_password="admin",
+def test_sonar_client_ensure_project_treats_retried_already_exists_as_success() -> None:
+    client = make_sonar_client_failing_with(
+        'HTTP error 400 for http://localhost:9000/api/projects/create: '
+        '{"errors":[{"msg":"Could not create Project, key already exists: k"}]}'
     )
+    client.ensure_project("key_deadbeef_abcd1234", "example")
 
-    def fail_other_400(*args, **kwargs):
-        raise AnalysisError(
-            'HTTP error 400 for http://localhost:9000/api/projects/create: '
-            '{"errors":[{"msg":"Could not create Project: quota exceeded"}]}'
-        )
 
-    client.request = fail_other_400  # type: ignore[method-assign]
+def test_sonar_client_ensure_project_does_not_claim_unrelated_create_failures() -> None:
+    client = make_sonar_client_failing_with(
+        'HTTP error 400 for http://localhost:9000/api/projects/create: '
+        '{"errors":[{"msg":"Could not create Project: quota exceeded"}]}'
+    )
     with pytest.raises(AnalysisError, match="quota exceeded"):
-        client.create_project("key_deadbeef_abcd1234", "example")
+        client.ensure_project("key_deadbeef_abcd1234", "example")
 
 
-def test_sonar_client_create_project_propagates_other_errors():
-    client = SonarClient(
-        host_url="http://localhost:9000",
-        admin_user="admin",
-        admin_password="secret",
-        admin_default_password="admin",
+def test_sonar_client_ensure_project_propagates_other_errors() -> None:
+    client = make_sonar_client_failing_with(
+        "HTTP error 403 for http://localhost:9000/api/projects/create"
     )
-
-    def fail_forbidden(*args, **kwargs):
-        raise AnalysisError("HTTP error 403 for http://localhost:9000/api/projects/create")
-
-    client.request = fail_forbidden  # type: ignore[method-assign]
     with pytest.raises(AnalysisError, match="403"):
-        client.create_project("key_deadbeef_abcd1234", "example")
+        client.ensure_project("key_deadbeef_abcd1234", "example")
 
 
-def test_sonar_extractor_owns_and_cleans_up_project_after_retried_create(tmp_path, monkeypatch):
-    calls = []
+def test_sonar_extractor_owns_and_cleans_up_project_after_retried_create(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[object, ...]] = []
     monkeypatch.setattr(
         "josseph.metrics.extractors.sonar._build_sonar_project_key",
         lambda target: "example_repo_deadbeef1234_abcd1234",
     )
 
     class FakeClient:
-        def wait_for_status(self, expected, timeout):
+        def wait_for_status(self, expected: str, timeout: int) -> None:
             calls.append(("wait_for_status", expected, timeout))
 
-        def ensure_admin_password(self):
+        def ensure_admin_password(self) -> None:
             calls.append(("ensure_admin_password",))
 
-        def create_project(self, project_key, project_name):
-            calls.append(("create_project", project_key, project_name))
-            # provider contract: True both for fresh creates and for
+        def ensure_project(self, project_key: str, project_name: str) -> None:
+            # provider contract: returns for fresh creates and for
             # "already exists" reported after a retried POST
-            return True
+            calls.append(("ensure_project", project_key, project_name))
 
-        def generate_token(self):
+        def generate_token(self) -> str:
             calls.append(("generate_token",))
             return "token-123"
 
-        def wait_for_analysis(self, project_key):
+        def wait_for_analysis(self, project_key: str) -> None:
             calls.append(("wait_for_analysis", project_key))
 
-        def fetch_metrics(self, project_key):
+        def fetch_metrics(self, project_key: str) -> dict[str, object]:
             calls.append(("fetch_metrics", project_key))
             return {"project": project_key, "measures": []}
 
-        def delete_project(self, project_key):
+        def delete_project(self, project_key: str) -> None:
             calls.append(("delete_project", project_key))
 
     extractor = SonarExtractor(

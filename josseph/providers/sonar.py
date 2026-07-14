@@ -68,8 +68,8 @@ class SonarClient:
                 return
             raise
 
-    def create_project(self, project_key: str, project_name: str) -> bool:
-        """Create the project, treating "already exists" as success.
+    def ensure_project(self, project_key: str, project_name: str) -> None:
+        """Make sure the project exists, treating "already exists" as success.
 
         Project keys carry a per-run uuid4 suffix, so a pre-existing project
         with the same key can only be the result of our own create request
@@ -90,9 +90,8 @@ class SonarClient:
                     "SonarQube project %s already exists; treating retried create as success.",
                     project_key,
                 )
-                return True
+                return
             raise
-        return True
 
     def generate_token(self) -> str:
         response = self.request_json(
