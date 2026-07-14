@@ -17,12 +17,18 @@ pip install -e ".[dev]"
 ## Running tests
 
 ```bash
+# Unit tests (the default)
 pytest tests/ -v
+
+# Integration tests: clone a real repository and run the real CK/CM jars
+# (needs network access and a Java runtime)
+pytest tests/ -v -m integration
 ```
 
-Tests are deterministic and require no network access, Docker, or external
-services. All external dependencies (subprocess, GitHub API, SonarQube) are
-replaced with fakes or stubs.
+The default run is unit-only: deterministic, no network access, Docker, or
+external services. All external dependencies (subprocess, GitHub API,
+SonarQube) are replaced with fakes or stubs. Tests marked `integration` are
+excluded by default and run in a separate CI job.
 
 ## Adding a new extractor
 

@@ -42,6 +42,10 @@ select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
 ignore = ["BLE001"]
 
 [tool.pytest.ini_options]
+# The default run is unit-only: deterministic, no network, no external
+# processes. Run the integration suite explicitly with `-m integration`
+# (the command-line -m overrides this default).
+addopts = "-m 'not integration'"
 markers = [
     "integration: end-to-end pipeline integration tests",
 ]

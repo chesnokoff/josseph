@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from argparse import Namespace
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -55,7 +56,10 @@ def _write_config(tmp_path) -> Namespace:
 
 
 @pytest.mark.integration
-def test_pipeline_clones_real_public_repository_and_writes_artifacts(tmp_path, monkeypatch):
+def test_pipeline_clones_real_public_repository_and_writes_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     results_dir = tmp_path / "results"
     projects_dir = tmp_path / "projects"
     monkeypatch.setattr("josseph.pipeline.app.RESULTS_DIR", results_dir)
@@ -94,6 +98,10 @@ def test_pipeline_clones_real_public_repository_and_writes_artifacts(tmp_path, m
     ck_frame = pd.read_parquet(project_dir / "ck.parquet")
     assert not ck_frame.empty
     assert "cbo" in ck_frame.columns
+    cm_frame = pd.read_parquet(project_dir / "cm.parquet")
+    assert not cm_frame.empty
+    assert "file" in cm_frame.columns
+    assert cm_frame["file"].str.endswith(".java").all()
 
     github_metadata = json.loads((project_dir / "github.json").read_text(encoding="utf-8"))
     ck_metadata = json.loads((project_dir / "ck.json").read_text(encoding="utf-8"))
