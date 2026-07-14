@@ -325,7 +325,7 @@ def test_sonar_extractor_uses_client_and_converts_measures(tmp_path, monkeypatch
         def ensure_admin_password(self):
             calls.append(("ensure_admin_password",))
 
-        def ensure_project(self, project_key, project_name):
+        def ensure_project(self, project_key: str, project_name: str) -> None:
             calls.append(("ensure_project", project_key, project_name))
 
         def generate_token(self):
@@ -388,7 +388,7 @@ def test_sonar_extractor_deletes_project_on_scanner_failure(tmp_path, monkeypatc
         def ensure_admin_password(self):
             calls.append(("ensure_admin_password",))
 
-        def ensure_project(self, project_key, project_name):
+        def ensure_project(self, project_key: str, project_name: str) -> None:
             calls.append(("ensure_project", project_key, project_name))
 
         def generate_token(self):

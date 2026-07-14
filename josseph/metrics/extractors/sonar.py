@@ -197,14 +197,14 @@ class SonarExtractor(MetricExtractor):
     def _run_scan(self, target: AnalysisTarget) -> list[dict[str, object]]:
         repo_path = _require_checkout(target)
         sonar_project_key = _build_sonar_project_key(target)
-        created_project = False
+        owns_project = False
         token: str | None = None
 
         try:
             self.client.wait_for_status("UP", timeout=180)
             self.client.ensure_admin_password()
             self.client.ensure_project(sonar_project_key, target.project_name)
-            created_project = True
+            owns_project = True
             token = self.client.generate_token()
             self._scanner.run(repo_path, sonar_project_key, token)
             self.client.wait_for_analysis(sonar_project_key)
@@ -214,7 +214,7 @@ class SonarExtractor(MetricExtractor):
                 _redact_token_text(f"Sonar scan failed for {repo_path}: {exc}", token)
             ) from exc
         finally:
-            if created_project:
+            if owns_project:
                 try:
                     self.client.delete_project(sonar_project_key)
                 except Exception as exc:
