@@ -11,6 +11,8 @@ Container-first pipeline for collecting repository metrics with:
 - GitHub API metadata
 - SonarQube metrics (`sonar` extractor)
 
+**Documentation:** [User guide and reference](https://chesnokoff.github.io/josseph/)
+
 ## Project Layout
 - `configs/` — YAML configuration files for runs
 - `configs/repositories/` — small example repository lists for e2e runs
