@@ -1,0 +1,854 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="OSS Metrics Extraction Pipeline">
+      
+      
+      
+        <link rel="canonical" href="https://chesnokoff.github.io/josseph/getting-started/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../config/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Getting Started - JOSSeph</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#getting-started" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="JOSSeph" class="md-header__button md-logo" aria-label="JOSSeph" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            JOSSeph
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting Started
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="JOSSeph" class="md-nav__button md-logo" aria-label="JOSSeph" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    JOSSeph
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-create-the-repository-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create the repository list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-create-the-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Create the config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-run-the-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Run the pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-verify-artifacts-not-just-console-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Verify artifacts, not just console output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-know-what-failure-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Know what failure looks like
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-add-service-backed-extractors-only-when-ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Add service-backed extractors only when ready
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-create-the-repository-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create the repository list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-create-the-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Create the config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-run-the-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Run the pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-verify-artifacts-not-just-console-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Verify artifacts, not just console output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-know-what-failure-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Know what failure looks like
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-add-service-backed-extractors-only-when-ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Add service-backed extractors only when ready
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="getting-started">Getting Started</h1>
+<p>This page gets you from an empty workspace to a run you can verify.</p>
+<h2 id="quickstart">Quickstart</h2>
+<p>Run the checked-in CK + CM example on a pinned revision of
+<code>junit-team/junit4</code>. It needs neither credentials nor SonarQube:</p>
+<pre><code class="language-bash">docker compose run --rm --build --no-deps josseph configs/quickstart.yaml
+</code></pre>
+<p>The config is visible at <code>configs/quickstart.yaml</code>, its repository list is at
+<code>configs/repositories/quickstart.yaml</code>, and a successful output is checked in
+under <code>examples/sample-run/</code>.</p>
+<h2 id="1-create-the-repository-list">1. Create the repository list</h2>
+<p>The repository file is a YAML sequence. Each entry is either a plain URL string
+or a mapping with a <code>url</code> and an optional <code>commit</code> hash. Duplicates are removed
+after loading.</p>
+<pre><code class="language-yaml"># configs/repositories/one-repo.yaml
+- https://github.com/apache/airflow.git
+- https://github.com/apache/spark.git
+</code></pre>
+<p>To pin a specific commit:</p>
+<pre><code class="language-yaml">- url: https://github.com/apache/airflow.git
+  commit: deadbeefcafebabe
+- https://github.com/apache/spark.git
+</code></pre>
+<p>The same repository cannot appear twice in one run with different pinned
+commits. The config validator rejects that input because outputs are stored per
+repository, not per revision.</p>
+<h2 id="2-create-the-config">2. Create the config</h2>
+<p>Use a small config first:</p>
+<pre><code class="language-yaml">repositories: repositories/one-repo.yaml
+tools:
+  - github
+  - ck
+workers: 2
+</code></pre>
+<p>Save this example as <code>configs/my-run.yaml</code>.</p>
+<p>Because this config lives under <code>configs/</code>, that repository path resolves to
+<code>configs/repositories/one-repo.yaml</code>.</p>
+<p>Contract:</p>
+<ul>
+<li><code>repositories</code> is required and must point to a file</li>
+<li><code>tools</code> is optional; omitted means "all registered extractors"</li>
+<li>pinned commits are only supported when reachable from the repository's default branch</li>
+<li>the same repository cannot appear twice in one run with different pinned commits</li>
+<li><code>workers</code> must be a positive integer when set</li>
+</ul>
+<h2 id="3-run-the-pipeline">3. Run the pipeline</h2>
+<p>JOSSeph is Docker-first. On <strong>Linux</strong>, SonarQube requires a kernel parameter
+increase before the first run:</p>
+<pre><code class="language-bash">sudo sysctl -w vm.max_map_count=524288
+</code></pre>
+<p>This is not needed on macOS or Windows (Docker Desktop handles it).</p>
+<p>Then run the pipeline:</p>
+<pre><code class="language-bash">docker compose run --rm --build --no-deps josseph configs/my-run.yaml
+</code></pre>
+<p>You can run the module directly for development or debugging, but that is a
+fallback path, not the primary operating model:</p>
+<pre><code class="language-bash">python -m josseph configs/my-run.yaml
+</code></pre>
+<h2 id="4-verify-artifacts-not-just-console-output">4. Verify artifacts, not just console output</h2>
+<p>After a successful run, expect artifacts like:</p>
+<pre><code class="language-text">results/
+  apache@airflow/
+    github.parquet
+    github.json
+    ck.parquet
+    ck.json
+  apache@spark/
+    github.parquet
+    github.json
+    ck.parquet
+    ck.json
+  runs/
+    20260328T120000Z/
+      summary.json
+</code></pre>
+<p>Open <code>results/runs/&lt;run-id&gt;/summary.json</code> first. A healthy run looks like:</p>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;exit_code&quot;: 0,
+  &quot;summary&quot;: {
+    &quot;repository_count&quot;: 2,
+    &quot;affected_repository_count&quot;: 0,
+    &quot;repository_failure_count&quot;: 0,
+    &quot;extractor_failure_count&quot;: 0,
+    &quot;failed_run_count&quot;: 0,
+    &quot;skipped_run_count&quot;: 0
+  }
+}
+</code></pre>
+<h2 id="5-know-what-failure-looks-like">5. Know what failure looks like</h2>
+<p>If <code>ck</code> fails on <code>apache@spark</code> but <code>github</code> succeeds, the run can still finish.
+What changes:</p>
+<ul>
+<li><code>results/apache@spark/github.parquet</code> may exist</li>
+<li><code>results/apache@spark/ck.parquet</code> may be missing</li>
+<li><code>summary.json</code> records the extractor failure</li>
+<li>process exit code can still be <code>0</code></li>
+<li><code>observation-bound</code> extractors still use the same file-based cache unless you pass <code>--force</code></li>
+</ul>
+<p>Example excerpt:</p>
+<pre><code class="language-json">{
+  &quot;run_id&quot;: &quot;20260322T150000Z&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;started_at_utc&quot;: &quot;2026-03-22T15:00:00Z&quot;,
+  &quot;finished_at_utc&quot;: &quot;2026-03-22T15:00:12Z&quot;,
+  &quot;duration_seconds&quot;: 12.0,
+  &quot;exit_code&quot;: 0,
+  &quot;summary&quot;: {
+    &quot;repository_count&quot;: 2,
+    &quot;affected_repository_count&quot;: 1,
+    &quot;repository_failure_count&quot;: 0,
+    &quot;extractor_failure_count&quot;: 1,
+    &quot;failed_run_count&quot;: 1,
+    &quot;skipped_run_count&quot;: 0
+  },
+  &quot;extractor_failures&quot;: [
+    {
+      &quot;scope&quot;: &quot;extractor&quot;,
+      &quot;repo_url&quot;: &quot;https://github.com/apache/spark.git&quot;,
+      &quot;project_name&quot;: &quot;apache@spark&quot;,
+      &quot;extractor&quot;: &quot;ck&quot;,
+      &quot;requested_commit_hash&quot;: null,
+      &quot;metric_binding&quot;: &quot;revision-bound&quot;,
+      &quot;reason&quot;: &quot;CK execution failed with exit code 1: java -jar ...&quot;,
+      &quot;recorded_at_utc&quot;: &quot;2026-03-28T12:01:04Z&quot;
+    }
+  ]
+}
+</code></pre>
+<p>The example below is intentionally partial; omitted fields are unchanged from
+the full schema.</p>
+<h2 id="6-add-service-backed-extractors-only-when-ready">6. Add service-backed extractors only when ready</h2>
+<ul>
+<li><code>github</code> works best with <code>github_token</code> or <code>GITHUB_TOKEN</code></li>
+<li><code>sonar</code> requires a reachable SonarQube instance</li>
+<li>on a fresh local SonarQube container, keep <code>SONAR_ADMIN_DEFAULT_PASSWORD</code>
+  equal to the current admin password and set <code>SONAR_ADMIN_PASSWORD</code> to the
+  new policy-compliant password JOSSeph should use after bootstrap</li>
+<li><code>ck</code> and <code>cm</code> require their vendored JARs to exist</li>
+</ul>
+<p>If those prerequisites are missing, the correct expectation is failure reporting,
+not silent fallback.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
